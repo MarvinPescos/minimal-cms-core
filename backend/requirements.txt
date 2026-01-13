@@ -1,0 +1,30 @@
+# Data Validation
+pydantic
+pydantic-settings
+email-validator
+python-multipart
+
+#Test
+pytest-asyncio>=0.24.0
+
+# Web Framework
+fastapi
+uvicorn
+
+# Database
+sqlalchemy[asyncio]
+asyncpg           
+alembic
+
+# Rate Limiting & Caching
+slowapi
+redis
+fastapi-cache2[redis]
+
+# Observability (Logging)
+structlog
+
+# Supabase
+supabase
+pyjwt[crypto]
+cryptography

@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments ---
+venv/
+.venv/
+env/
+
+# --- Environment Variables (CRITICAL) ---
+# This ignores .env, .env.development, .env.production, etc.
+.env
+.env.*
+!.env.example
+
+# --- IDEs & Editors ---
+.vscode/
+.idea/
+*.swp
+.devcontainer/
+# Keep .devcontainer.json but ignore other local devcontainer logs if any
+# (Usually .devcontainer folder IS committed, but if you have local-only overrides, ignore them)
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+
+# --- Testing & Type Checking ---
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# --- Docker ---
+docker-compose.override.yml
