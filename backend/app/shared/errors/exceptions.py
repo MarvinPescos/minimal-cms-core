@@ -24,9 +24,9 @@ class BaseAppException(Exception):
                 details: Extra error details (default: None)
         """
 
-        self.message = message,
-        self.status_code = status_code,
-        self.details = details,
+        self.message = message
+        self.status_code = status_code
+        self.details = details
         super().__init__(self.message)
     
     def __str__(self) -> str:

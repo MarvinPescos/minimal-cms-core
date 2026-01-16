@@ -28,3 +28,6 @@ structlog
 supabase
 pyjwt[crypto]
 cryptography
+
+# Slugging
+python-slugify

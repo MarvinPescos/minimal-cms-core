@@ -16,10 +16,16 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = Field(..., description="development or production")
 
+    SUPABASE_URL: str = Field(..., description="Supabase project URL")
+    SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key") 
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(..., description="Supabase role key for admin operations")
+    SUPABASE_JWT_SECRET: str = Field(..., description="Supabase JWT secret for token verification")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+        extra = "ignore" #Ignore muna di paman need
 
-settings = Settings
+settings = Settings()
 

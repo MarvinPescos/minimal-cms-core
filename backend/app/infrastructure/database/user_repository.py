@@ -1,5 +1,5 @@
 from typing import List
-from sqlalchemy import select, or_
+from sqlalchemy import select, and_
 import uuid
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -10,14 +10,14 @@ from ..observability import log
 
 
 class UserScopeRepository(BaseRepository[ModelType]):
-    
+
     async def get_by_user_and_id(self, user_id: uuid.UUID, item_id: uuid.UUID):
         """Get single item scoped for user"""
         try:
             result = await self.session.execute(
                 select(self.model).
                 where(
-                    or_(
+                    and_(
                         self.model.user_id == user_id,
                         self.model.id == item_id
                     )
@@ -36,13 +36,13 @@ class UserScopeRepository(BaseRepository[ModelType]):
                 f"Failed to get by user and id {self.model_name}",
                 original_error=e
             )
-        
+
     async def get_all_by_user_id(self, user_id: uuid.UUID, limit: int = 100, offset: int = 0) ->  List[ModelType]:
         """Get all item by user ID with pagination ofc"""
         try:
             result = await self.session.execute(
                 select(self.model).
-                where(self.model.id == user_id).
+                where(self.model.user_id == user_id).
                 limit(limit).
                 offset(offset)
             )
@@ -59,8 +59,8 @@ class UserScopeRepository(BaseRepository[ModelType]):
                 f"Failed to get all by user id {self.model_name}",
                 original_error=e
             )
-        
-        
+
+
 
 
 

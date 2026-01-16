@@ -16,8 +16,8 @@ class BaseRepository(Generic[ModelType]):
     """
 
     def __init__(self, model: Type[ModelType], session: AsyncSession):
-        self.session = session,
-        self.model = model,
+        self.session = session
+        self.model = model
         self.model_name = model.__name__
     
     async def create(self, **data) -> ModelType:
@@ -94,7 +94,7 @@ class BaseRepository(Generic[ModelType]):
     async def update(self, db_obj: ModelType, **data ) -> ModelType:
         """Update a record"""
         try:
-            for key, value in data.items:
+            for key, value in data.items():
                 if hasattr(db_obj, key) and value is not None:
                     setattr(db_obj, key, value )
             await self.session.flush()
