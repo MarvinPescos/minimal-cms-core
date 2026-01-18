@@ -3,6 +3,8 @@ Shared base exceptions class for the application.
 All feature specific exception should inherit from these base classes
 """
 
+from ..utils.to_dict import build_error_response
+
 class BaseAppException(Exception):
     """
         Base exception class for all application erorr.
@@ -34,12 +36,13 @@ class BaseAppException(Exception):
     
     def to_dict(self) -> dict:
         """Convert exceptions to dictionary format"""
-        return {
-            "error": self.__class__.__name__,
-            "message": self.message,
-            "status_code": self.status_code,
-            "details": self.details,
-        }
+        return build_error_response(
+            error_type=self.__class__.__name__,
+            message=self.message,
+            status_code=self.status_code,
+            details=self.details
+        )
+            
     
 # ----------------------------------------------------
 # Common HTTP exceptions used across the application
