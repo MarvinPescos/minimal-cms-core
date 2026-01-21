@@ -87,6 +87,7 @@ jobs:
           
       - name: Run tests
         env:
+          PYTHONPATH: .
           ENVIRONMENT: test
           DB_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
           TEST_DB_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
