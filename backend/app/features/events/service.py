@@ -11,6 +11,11 @@ from app.shared.errors.exceptions import BaseAppException, ConflictError, NotFou
 from app.infrastructure.observability import log
 
 class EventService:
+    """
+    Event management service handling CRUD operations
+    for user-owned events.
+    """
+
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repo = EventsRepository(session)
@@ -19,15 +24,31 @@ class EventService:
 
     async def get_user_events(self, user_id: uuid.UUID) -> List[Event]:
         """
-            Retrieve all events belonging to this user
-        """
+        Retrieve all events belonging to a specific user.
 
+        Args:
+            user_id: UUID of the user whose events to retrieve.
+
+        Returns:
+            A list of Event objects belonging to the user.
+            Returns an empty list if no events exist.
+        """
         log.info("events.fetch.all", user_id=user_id)
         return await self.repo.get_all_by_user_id(user_id=user_id)
 
     async def get_event(self, user_id: uuid.UUID, event_id: uuid.UUID) -> Event:
         """
-            Retrieve single events belonging to this user
+        Retrieve a single event by ID with ownership verification.
+
+        Args:
+            user_id: UUID of the user requesting the event.
+            event_id: UUID of the event to retrieve.
+
+        Returns:
+            The Event object matching the provided event_id.
+
+        Raises:
+            NotFoundError: If the event does not exist or does not belong to the user.
         """
         event = await self.repo.get_by_user_and_id(user_id=user_id, item_id=event_id)
 
@@ -46,7 +67,18 @@ class EventService:
 
     async def add_event(self, user_id: uuid.UUID, data: EventCreate) -> Event:
         """
-            Add a new event to the users events
+        Create a new event for a user with auto-generated unique slug.
+
+        Args:
+            user_id: UUID of the user creating the event.
+            data: EventCreate schema containing event title and details.
+
+        Returns:
+            The newly created Event object with generated slug.
+
+        Raises:
+            ConflictError: If the event violates database integrity constraints.
+            BaseAppException: If a database error occurs during creation.
         """
         log.info(f"User: {user_id} is adding event '{data.title}'")
         try:
@@ -91,7 +123,20 @@ class EventService:
         data: EventUpdate
     ) -> Event:
         """
-            Partially update an existing shopping item with ownership verification
+        Partially update an existing event with ownership verification.
+
+        Args:
+            user_id: UUID of the user requesting the update.
+            event_id: UUID of the event to update.
+            data: EventUpdate schema containing fields to update.
+
+        Returns:
+            The updated Event object with applied changes.
+
+        Raises:
+            NotFoundError: If the event does not exist or does not belong to the user.
+            ConflictError: If the update violates database integrity constraints.
+            BaseAppException: If a database error occurs during update.
         """
         log.info(f"User: {user_id} is updating event '{data.title}'")
 
@@ -124,8 +169,21 @@ class EventService:
             raise BaseAppException("Failed to update event")
 
 
-    async def delete_event(self, user_id: uuid.UUID, event_id: uuid.UUID ) -> None:
-        "Permanently delete a fridge item after verifying ownership."
+    async def delete_event(self, user_id: uuid.UUID, event_id: uuid.UUID) -> None:
+        """
+        Permanently delete an event after verifying ownership.
+
+        Args:
+            user_id: UUID of the user requesting the deletion.
+            event_id: UUID of the event to delete.
+
+        Returns:
+            None. The event is permanently removed from the database.
+
+        Raises:
+            NotFoundError: If the event does not exist or does not belong to the user.
+            BaseAppException: If a database error occurs during deletion.
+        """
 
         event = await self.get_event(user_id=user_id, event_id=event_id)
         log.info(f"User: {user_id} is deleting event '{event.title}'")
