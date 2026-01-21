@@ -16,6 +16,12 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: str = Field(..., description="development or production")
 
+    # CORS Configuration
+    CORS_ORIGINS: List[str] = Field(
+        default=["*"],
+        description="List of allowed CORS origins. Use ['*'] for all or specify domains."
+    )
+
     SUPABASE_URL: str = Field(..., description="Supabase project URL")
     SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key") 
     SUPABASE_SERVICE_ROLE_KEY: str = Field(..., description="Supabase role key for admin operations")
