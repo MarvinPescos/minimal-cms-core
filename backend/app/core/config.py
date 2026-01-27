@@ -22,9 +22,8 @@ class Settings(BaseSettings):
         description="List of allowed CORS origins. Use ['*'] for all or specify domains."
     )
 
-    #  Redis Configuration
-    REDIS_HOST: str = Field(..., description="Redis Host")
-    REDIS_PORT: str = Field(..., description="Redis port")
+    #  Redis Configuration (supports Upstash rediss:// URLs with auth)
+    REDIS_URL: str = Field(..., description="Redis connection URL (e.g., rediss://default:token@host:port)")
 
     SUPABASE_URL: str = Field(..., description="Supabase project URL")
     SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key") 
