@@ -22,7 +22,7 @@ class ImageRepository(UserScopeRepository[Image]):
             .where(
                 and_(
                     Image.user_id == user_id,
-                    Album.is_published == True
+                    Album.is_published
                 )
             )
             .limit(limit)
