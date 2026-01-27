@@ -22,6 +22,10 @@ class Settings(BaseSettings):
         description="List of allowed CORS origins. Use ['*'] for all or specify domains."
     )
 
+    #  Redis Configuration
+    REDIS_HOST: str = Field(..., description="Redis Host")
+    REDIS_PORT: str = Field(..., description="Redis port")
+
     SUPABASE_URL: str = Field(..., description="Supabase project URL")
     SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key") 
     SUPABASE_SERVICE_ROLE_KEY: str = Field(..., description="Supabase role key for admin operations")
