@@ -39,7 +39,7 @@ class ImageRepository(UserScopeRepository[Image]):
                 and_(
                     Image.user_id == user_id,
                     Image.slug == slug,
-                    Album.is_published == True
+                    Album.is_published
                 )
             )
         )
