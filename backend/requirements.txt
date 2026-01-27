@@ -31,3 +31,6 @@ cryptography
 
 # Slugging
 python-slugify
+
+# Image Processing
+Pillow

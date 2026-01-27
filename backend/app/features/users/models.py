@@ -8,6 +8,7 @@ from app.infrastructure.database import Base, TimestampMixin
 
 if (TYPE_CHECKING):
     from app.features.events import Event
+    from app.features.gallery.models import Album
 
 class User(Base, TimestampMixin):
     __tablename__ = "users"
@@ -28,6 +29,10 @@ class User(Base, TimestampMixin):
     #=== relationships ===
 
     events: Mapped[list["Event"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    albums: Mapped[list["Album"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
     )

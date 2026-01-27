@@ -1,10 +1,7 @@
 from app.infrastructure.database.user_repository import UserScopeRepository
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select, and_
 from .models import Event
-
-from app.infrastructure.observability import log
-from app.infrastructure.database import DatabaseError
+import uuid
 
 class EventsRepository(UserScopeRepository[Event]):
     """Repository Pattern for events item access"""
@@ -14,21 +11,32 @@ class EventsRepository(UserScopeRepository[Event]):
 
     # ============ Custom Methods ============
 
-    async def get_by_slug(self, slug: str) -> Event | None:
-        try:
-            result = await self.session.execute(
-                select(Event).
-                where(Event.slug == slug)
+        
+    async def get_published_by_user(self, user_id: uuid.UUID, limit: int, offset: int):
+        result = await self.session.execute(
+            select(self.model)
+            .where(
+                and_(
+                    self.model.user_id == user_id,
+                    self.model.is_published
+                )
             )
-            return result.scalar_one_or_none()
-        except SQLAlchemyError as e:
-            log.error(
-                "database.error",
-                model=self.model_name,
-                operation="get_by_user_and_id",
-                error=str(e)
+            .order_by(self.model.start_at)
+            .limit(limit)
+            .offset(offset)
+        )
+        return result.scalars().all()
+
+    async def get_published_event_by_slug(self, user_id: uuid.UUID, slug: str):
+        """Get a single published event by slug for public access"""
+        result = await self.session.execute(
+            select(self.model)
+            .where(
+                and_(
+                    self.model.user_id == user_id,
+                    self.model.slug == slug,
+                    self.model.is_published
+                )
             )
-            raise DatabaseError(
-                f"Failed to get by user and id {self.model_name}",
-                original_error=e
-            )
+        )
+        return result.scalar_one_or_none()

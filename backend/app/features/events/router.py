@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request, File, UploadFile, Form
 from typing import List
 import uuid
 
 from app.infrastructure.security import require_auth, AuthenticatedUser
+from app.infrastructure.cache import limiter, RateLimits
 from .schemas import (
     EventResponse,
     EventCreate,
@@ -15,6 +16,29 @@ router = APIRouter(prefix="/events", tags=["Events"])
 
 
 # === Read Operations ===
+
+# Public endpoint - must be defined BEFORE /{event_id} to avoid route conflicts
+@router.get("/public", response_model=List[EventResponse])
+async def list_public_events(
+    user_id: uuid.UUID,  # The tenant's ID (passed from frontend)
+    limit: int = 50,
+    offset: int = 0,
+    service: EventService = Depends(get_event_service)
+    # NO require_auth - anyone can access
+):
+    """Get all published events for a specific tenant's landing page."""
+    return await service.get_public_events(user_id, limit, offset)
+
+@router.get("/public/{slug}", response_model=EventResponse)
+async def get_public_event(
+    slug: str,
+    user_id: uuid.UUID,  # The tenant's ID (passed as query param)
+    service: EventService = Depends(get_event_service)
+    # NO require_auth - anyone can access
+):
+    """Get a single published event by slug for a specific tenant's landing page."""
+    return await service.get_public_event_by_slug(user_id, slug)
+
 
 @router.get(
     "/",
@@ -40,8 +64,9 @@ router = APIRouter(prefix="/events", tags=["Events"])
         }
     }
 )
-# @limiter.limit(RateLimits.READ_HEAVY)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.READ_HEAVY)
 async def list_events(
+    request: Request,
     current_user: AuthenticatedUser = Depends(require_auth),
     service: EventService = Depends(get_event_service)
 ):
@@ -115,12 +140,17 @@ async def get_event(
 )
 # @limiter.limit(RateLimits.WRITE)  # TODO: Add rate limiting
 async def create_event(
-    data: EventCreate,
+    data: str = Form(..., description="Event data as JSON string"),
+    file: UploadFile | None = File(None, description="Image files to upload (max 5MB each)"),
     current_user: AuthenticatedUser = Depends(require_auth),
     service: EventService = Depends(get_event_service)
 ):
     """Create a new event."""
-    return await service.add_event(uuid.UUID(current_user.user_id), data)
+    event_data = EventCreate.model_validate_json(data)
+    if file:
+        return await service.add_event(uuid.UUID(current_user.user_id), file, event_data)
+    else:
+        return await service.add_event(uuid.UUID(current_user.user_id), None, event_data)
 
 
 @router.patch(
