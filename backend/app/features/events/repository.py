@@ -18,7 +18,7 @@ class EventsRepository(UserScopeRepository[Event]):
             .where(
                 and_(
                     self.model.user_id == user_id,
-                    self.model.is_published == True
+                    self.model.is_published
                 )
             )
             .order_by(self.model.start_at)
@@ -26,19 +26,6 @@ class EventsRepository(UserScopeRepository[Event]):
             .offset(offset)
         )
         return result.scalars().all()
-
-    async def get_published_event_by_id(self, user_id: uuid.UUID, event_id: uuid.UUID):
-        result = await self.session.execute(
-            select(self.model)
-            .where(
-                and_(
-                    self.model.user_id == user_id,
-                    self.model.id == event_id,
-                    self.model.is_published == True,
-                )
-            )
-        )
-        return result.scalar_one_or_none()
 
     async def get_published_event_by_slug(self, user_id: uuid.UUID, slug: str):
         """Get a single published event by slug for public access"""
@@ -48,7 +35,7 @@ class EventsRepository(UserScopeRepository[Event]):
                 and_(
                     self.model.user_id == user_id,
                     self.model.slug == slug,
-                    self.model.is_published == True,
+                    self.model.is_published
                 )
             )
         )
