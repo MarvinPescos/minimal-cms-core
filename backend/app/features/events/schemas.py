@@ -21,7 +21,7 @@ class EventBase(BaseModel):
     title: str = Field(min_length=3, max_length=150, description="Title of the said event")
     summary: str = Field(min_length=3, max_length=255, description="Short descriptive summary of the event")
     content: str = Field(min_length=3, description="Full content of the event")
-    cover_image: str = Field(..., description="Url of the cover image")
+    # cover_image: str = Field(..., description="Url of the cover image")
     start_at: datetime = Field(..., description="date & time of the event (start_at)")
     end_at: datetime = Field(..., description="date & time of the event (end_at)")
     location: str = Field(..., description="Location of the event eg. Main Hall, Central Park")
@@ -51,3 +51,5 @@ class EventUpdate(BaseModel):
 class EventResponse(EventBase):
     """Schema for returning an event"""
     id: uuid.UUID = Field(..., description="UUID of the event")
+    cover_image: str = Field(..., description="Url of the cover image")
+

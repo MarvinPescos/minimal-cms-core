@@ -1,24 +1,27 @@
 from typing import List
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
-from slugify import slugify
 import uuid
 
 from app.infrastructure.database import IntegrityConstraintError, DatabaseError
+from app.shared.errors.exceptions import BaseAppException, ConflictError, NotFoundError
+from app.infrastructure.observability import log
+from app.shared.utils.image_validation import validate_image_file
+from app.infrastructure.clients.supabase_storage import SupabaseStorageClient
+
 from .repository import EventsRepository
 from .schemas import EventCreate, EventUpdate
 from .models import Event
-from app.shared.errors.exceptions import BaseAppException, ConflictError, NotFoundError
-from app.infrastructure.observability import log
 
 class EventService:
     """
-    Event management service handling CRUD operations
-    for user-owned events.
+    Event management service handling CRUD operations.
     """
 
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repo = EventsRepository(session)
+        self.storage = SupabaseStorageClient()
 
     #  === Read Operations ===
 
@@ -65,7 +68,7 @@ class EventService:
 
     #  === Write Operations ===
 
-    async def add_event(self, user_id: uuid.UUID, data: EventCreate) -> Event:
+    async def add_event(self, user_id: uuid.UUID, file: UploadFile ,data: EventCreate) -> Event:
         """
         Create a new event for a user with auto-generated unique slug.
 
@@ -82,23 +85,25 @@ class EventService:
         """
         log.info(f"User: {user_id} is adding event '{data.title}'")
         try:
-            slug = slugify(data.title)
-
-            base_slug = slug
-            counter = 1
-
-            # TODO Change this hahhatdog
-
-            while await self.repo.get_by_slug(slug):  # You'd need this repo method
-                slug = f"{base_slug}-{counter}"
-                counter += 1
+            slug = await self.repo.generate_unique_slug(data.title, user_id)
 
             log.info(
                 "event.create",
                 user_id=user_id,
                 event_name=data.title
             )
-            return await self.repo.create(user_id=user_id, slug=slug,**data.model_dump())
+
+            contents = await validate_image_file(file)
+
+            image_url = await self.storage.upload_image(
+                file_bytes=contents,
+                user_id=user_id,
+                folder="Gallery",
+                file_name=f"{slug}.{file.content_type.split('/')[-1]}",
+                content_type=file.content_type
+            )
+
+            return await self.repo.create(user_id=user_id, slug=slug, cover_image=image_url, **data.model_dump())
 
         except IntegrityConstraintError as e:
             log.warning(
@@ -204,3 +209,17 @@ class EventService:
                 error=str(e)
             )
             raise BaseAppException("Failed to delete event")
+
+    # Public
+
+        # Service
+    async def get_public_events(self, user_id: uuid.UUID, limit: int, offset: int):
+        """Get published events for a specific user/tenant"""
+        return await self.repo.get_published_by_user(user_id, limit, offset)
+
+    async def get_public_event_by_slug(self, user_id: uuid.UUID, slug: str):
+        """Get a single published event by slug for public access (SEO-friendly)"""
+        event = await self.repo.get_published_event_by_slug(user_id=user_id, slug=slug)
+        if not event:
+            raise NotFoundError("Event not found")
+        return event
