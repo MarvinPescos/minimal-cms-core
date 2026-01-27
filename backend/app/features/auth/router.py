@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database import get_db
+from app.infrastructure.cache import limiter, RateLimits
 from .service import AuthService
 from .dependencies import get_auth_service
 from .schemas import (
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
     - **Email Verification**: If enabled in Supabase, user must verify email before signing in.
     - **Username**: Must be 3-30 characters, alphanumeric and underscores only.
     - **Password**: Must be at least 8 characters with uppercase, lowercase, and digit.
-    - **Rate Limit**: Restricted to prevent abuse.
+    - **Rate Limit**: 5 requests per minute.
     """,
     responses={
         201: {"description": "User created successfully"},
@@ -43,11 +44,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
         502: {"description": "Failed to connect to Supabase"}
     }
 )
-# @limiter.limit(RateLimits.AUTH)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.AUTH_STRICT)
 async def sign_up(
+    request: Request,
     data: SignUpRequest,
     service: AuthService = Depends(get_auth_service)
-
 ) -> SignUpResponse:
     """Register a new user with Supabase and sync to local database."""
     result = await service.sign_up(data)
@@ -72,7 +73,7 @@ async def sign_up(
     
     - **Returns**: Access token, refresh token, and token expiration time.
     - **Email Verification**: User must have verified their email to sign in.
-    - **Rate Limit**: Restricted to prevent brute-force attacks.
+    - **Rate Limit**: 5 requests per minute.
     """,
     responses={
         200: {"description": "Successfully authenticated"},
@@ -87,8 +88,9 @@ async def sign_up(
         }
     }
 )
-# @limiter.limit(RateLimits.AUTH)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.AUTH_STRICT)
 async def sign_in(
+    request: Request,
     data: SignInRequest,
     session: AsyncSession = Depends(get_db),
     service: AuthService = Depends(get_auth_service)
@@ -113,7 +115,7 @@ async def sign_in(
     Resend the verification email for users who haven't verified their email yet.
     
     - **Use Case**: When verification link expires or email was not received.
-    - **Rate Limit**: Heavily restricted to prevent email spam.
+    - **Rate Limit**: 3 requests per minute.
     """,
     responses={
         200: {"description": "Verification email sent successfully"},
@@ -128,8 +130,9 @@ async def sign_in(
         }
     }
 )
-# @limiter.limit(RateLimits.EMAIL)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.PASSWORD)
 async def resend_verification(
+    request: Request,
     data: ResendVerificationRequest,
     service: AuthService = Depends(get_auth_service)
 ) -> MessageResponse:

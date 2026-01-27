@@ -16,6 +16,9 @@ from .schemas import AlbumCreate, AlbumUpdate, AlbumResponse, ImageResponse
 from .models import Album
 
 class AlbumService:
+    """
+    Album management service handling CRUD operations.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -24,12 +27,33 @@ class AlbumService:
     # === Read Operation ===
 
     async def get_user_albums(self, user_id: uuid.UUID) -> List[AlbumResponse]:
-        """Get all albums by user_id"""
+        """
+        Retrieve all albums belonging to a specific user.
+
+        Args:
+            user_id: UUID of the user whose albums to retrieve.
+
+        Returns:
+            A list of AlbumResponse objects belonging to the user.
+            Returns an empty list if no albums exist.
+        """
         log.info("album.fetch.all", user_id=user_id)
         return await self.repo.get_all_album_with_images(user_id=user_id)
 
     async def get_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> AlbumResponse:
-        """Retrieve a single album by ID"""        
+        """
+        Retrieve a single album by ID with ownership verification.
+
+        Args:
+            user_id: UUID of the user requesting the album.
+            album_id: UUID of the album to retrieve.
+
+        Returns:
+            The AlbumResponse object matching the provided album_id.
+
+        Raises:
+            NotFoundError: If the album does not exist or does not belong to the user.
+        """
         album = await self.repo.get_album_with_images(user_id, album_id)
 
         if not album:
@@ -42,8 +66,21 @@ class AlbumService:
     # === Write Operation ===
 
     async def create_album(self, user_id: uuid.UUID, data: AlbumCreate) -> Album:
-        """Create an album"""
-        log.info(f"User: {user_id} is adding event '{data.title}'")
+        """
+        Create a new album for a user with auto-generated unique slug.
+
+        Args:
+            user_id: UUID of the user creating the album.
+            data: AlbumCreate schema containing album title and details.
+
+        Returns:
+            The newly created AlbumResponse object with generated slug.
+
+        Raises:
+            ConflictError: If the album violates database integrity constraints.
+            BaseAppException: If a database error occurs during creation.
+        """
+        log.info(f"User: {user_id} is adding album '{data.title}'")
         try:
             slug = await self.repo.generate_unique_slug(data.title)
             album = await self.repo.create(user_id=user_id, slug=slug, **data.model_dump())
@@ -85,8 +122,23 @@ class AlbumService:
         album_id: uuid.UUID, 
         data: AlbumUpdate
     ) -> Album:
-        """Paritally update existing album"""
-        log.info(f"User: {user_id} is updating event '{data.title}'")
+        """
+        Partially update an existing album with ownership verification.
+
+        Args:
+            user_id: UUID of the user requesting the update.
+            album_id: UUID of the album to update.
+            data: AlbumUpdate schema containing fields to update.
+
+        Returns:
+            The updated Album object with applied changes.
+
+        Raises:
+            NotFoundError: If the album does not exist or does not belong to the user.
+            ConflictError: If the update violates database integrity constraints.
+            BaseAppException: If a database error occurs during update.
+        """
+        log.info(f"User: {user_id} is updating album '{data.title}'")
 
         album = await self.get_album(user_id=user_id, album_id=album_id)
 
@@ -118,9 +170,22 @@ class AlbumService:
     
     # TODO Need softdelete!!
     async def delete_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> None:
-        """Permanently delete an event"""
+        """
+        Permanently delete an album after verifying ownership.
+
+        Args:
+            user_id: UUID of the user requesting the deletion.
+            album_id: UUID of the album to delete.
+
+        Returns:
+            None. The album is permanently removed from the database.
+
+        Raises:
+            NotFoundError: If the album does not exist or does not belong to the user.
+            BaseAppException: If a database error occurs during deletion.
+        """
         album = await self.get_album(user_id=user_id, album_id=album_id)
-        log.info(f"User: {user_id} is deleting event '{album.title}'")
+        log.info(f"User: {user_id} is deleting album '{album.title}'")
 
         try:
             log.info(
@@ -138,21 +203,6 @@ class AlbumService:
                 error=str(e)
             )
             raise BaseAppException("Failed to delete album")
-
-    # === Public Access (no auth required) ===
-
-    async def get_public_albums(self, user_id: uuid.UUID, limit: int = 100, offset: int = 0):
-        """Get all published albums for a tenant's landing page"""
-        log.info("album.public.fetch.all", user_id=user_id)
-        return await self.repo.get_published_albums(user_id, limit, offset)
-
-    async def get_public_album_by_slug(self, user_id: uuid.UUID, slug: str):
-        """Get a single published album by slug for public access"""
-        album = await self.repo.get_published_album_by_slug(user_id, slug)
-        if not album:
-            raise NotFoundError("Album not found")
-        log.info("album.public.fetch", user_id=user_id, slug=slug)
-        return album
 
 
 class ImageService:
