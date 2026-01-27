@@ -49,4 +49,4 @@ class RateLimits:
     AUTH_MEDIUM = "10/minute"     # Sign in attempts
     PASSWORD = "3/minute"         # Password reset requests
     STANDARD = "100/minute"       # General API endpoints
-    READ_HEAVY = "3/minute"     # Read-only endpoints
+    READ_HEAVY = "200/minute"     # Read-only endpoints

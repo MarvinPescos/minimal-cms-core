@@ -17,24 +17,75 @@ router = APIRouter(prefix="/events", tags=["Events"])
 
 # === Read Operations ===
 
-# Public endpoint - must be defined BEFORE /{event_id} to avoid route conflicts
-@router.get("/public", response_model=List[EventResponse])
+# Public endpoint 
+@router.get(
+    "/public",
+    response_model=List[EventResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List public events",
+    description="""
+    Retrieve all published events for a specific tenant's landing page.
+    
+    - **No Authentication Required**: This is a public endpoint.
+    - **Filtering**: Only published events are returned.
+    - **Pagination**: Use limit and offset for pagination.
+    - **Rate Limit**: 200 requests per minute.
+    """,
+    responses={
+        200: {"description": "List of published events retrieved successfully"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.READ_HEAVY)
 async def list_public_events(
-    user_id: uuid.UUID,  # The tenant's ID (passed from frontend)
+    request: Request,
+    user_id: uuid.UUID,  
     limit: int = 50,
     offset: int = 0,
     service: EventService = Depends(get_event_service)
-    # NO require_auth - anyone can access
 ):
     """Get all published events for a specific tenant's landing page."""
     return await service.get_public_events(user_id, limit, offset)
 
-@router.get("/public/{slug}", response_model=EventResponse)
+
+@router.get(
+    "/public/{slug}",
+    response_model=EventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get public event by slug",
+    description="""
+    Retrieve a single published event by its SEO-friendly slug.
+    
+    - **No Authentication Required**: This is a public endpoint.
+    - **SEO-Friendly**: Uses slug instead of UUID for cleaner URLs.
+    - **Rate Limit**: 200 requests per minute.
+    """,
+    responses={
+        200: {"description": "Event details retrieved successfully"},
+        404: {"description": "Event not found or not published"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.READ_HEAVY)
 async def get_public_event(
+    request: Request,
     slug: str,
-    user_id: uuid.UUID,  # The tenant's ID (passed as query param)
+    user_id: uuid.UUID, 
     service: EventService = Depends(get_event_service)
-    # NO require_auth - anyone can access
 ):
     """Get a single published event by slug for a specific tenant's landing page."""
     return await service.get_public_event_by_slug(user_id, slug)
@@ -49,7 +100,7 @@ async def get_public_event(
     Retrieve all events belonging to the authenticated user.
     
     - **Ordering**: Events are returned by start date (soonest first).
-    - **Rate Limit**: This endpoint is "Read Heavy" and restricted to prevent abuse.
+    - **Rate Limit**: 200 requests per minute.
     """,
     responses={
         200: {"description": "List of events retrieved successfully"},
@@ -83,7 +134,7 @@ async def list_events(
     Retrieve details of a specific event by its ID.
     
     - **Authorization**: User can only access their own events.
-    - **Rate Limit**: Restricted to prevent abuse.
+    - **Rate Limit**: 200 requests per minute.
     """,
     responses={
         200: {"description": "Event details retrieved successfully"},
@@ -99,8 +150,9 @@ async def list_events(
         }
     }
 )
-# @limiter.limit(RateLimits.READ)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.READ_HEAVY)
 async def get_event(
+    request: Request,
     event_id: uuid.UUID,
     current_user: AuthenticatedUser = Depends(require_auth),
     service: EventService = Depends(get_event_service)
@@ -122,7 +174,7 @@ async def get_event(
     - **Title**: Must be 3-150 characters.
     - **Dates**: start_at and end_at cannot be in the past.
     - **Draft Mode**: Set is_published to false to save as draft.
-    - **Rate Limit**: Restricted to prevent spam.
+    - **Rate Limit**: 100 requests per minute.
     """,
     responses={
         201: {"description": "Event created successfully"},
@@ -138,8 +190,9 @@ async def get_event(
         }
     }
 )
-# @limiter.limit(RateLimits.WRITE)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.STANDARD)
 async def create_event(
+    request: Request,
     data: str = Form(..., description="Event data as JSON string"),
     file: UploadFile | None = File(None, description="Image files to upload (max 5MB each)"),
     current_user: AuthenticatedUser = Depends(require_auth),
@@ -163,7 +216,7 @@ async def create_event(
     
     - **Partial Update**: Only include fields you want to change.
     - **Authorization**: User can only update their own events.
-    - **Rate Limit**: Restricted to prevent abuse.
+    - **Rate Limit**: 100 requests per minute.
     """,
     responses={
         200: {"description": "Event updated successfully"},
@@ -180,8 +233,9 @@ async def create_event(
         }
     }
 )
-# @limiter.limit(RateLimits.WRITE)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.STANDARD)
 async def update_event(
+    request: Request,
     event_id: uuid.UUID,
     data: EventUpdate,
     current_user: AuthenticatedUser = Depends(require_auth),
@@ -200,7 +254,7 @@ async def update_event(
     
     - **Authorization**: User can only delete their own events.
     - **Warning**: This action cannot be undone.
-    - **Rate Limit**: Restricted to prevent abuse.
+    - **Rate Limit**: 100 requests per minute.
     """,
     responses={
         204: {"description": "Event deleted successfully"},
@@ -216,8 +270,9 @@ async def update_event(
         }
     }
 )
-# @limiter.limit(RateLimits.WRITE)  # TODO: Add rate limiting
+@limiter.limit(RateLimits.STANDARD)
 async def delete_event(
+    request: Request,
     event_id: uuid.UUID,
     current_user: AuthenticatedUser = Depends(require_auth),
     service: EventService = Depends(get_event_service)

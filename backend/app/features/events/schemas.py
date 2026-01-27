@@ -21,7 +21,6 @@ class EventBase(BaseModel):
     title: str = Field(min_length=3, max_length=150, description="Title of the said event")
     summary: str = Field(min_length=3, max_length=255, description="Short descriptive summary of the event")
     content: str = Field(min_length=3, description="Full content of the event")
-    # cover_image: str = Field(..., description="Url of the cover image")
     start_at: datetime = Field(..., description="date & time of the event (start_at)")
     end_at: datetime = Field(..., description="date & time of the event (end_at)")
     location: str = Field(..., description="Location of the event eg. Main Hall, Central Park")
@@ -40,7 +39,6 @@ class EventUpdate(BaseModel):
     title: str | None = Field(None, min_length=3, max_length=150)
     summary: str | None = Field(None, min_length=3, max_length=255)
     content: str | None = Field(None, min_length=3)
-    cover_image: str | None = None
     start_at: ValidatedDatetime = None
     end_at: ValidatedDatetime = None
     location: str | None = None
