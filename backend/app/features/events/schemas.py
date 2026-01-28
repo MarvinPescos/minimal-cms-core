@@ -52,5 +52,5 @@ class EventResponse(EventBase):
     """Schema for returning an event"""
     id: uuid.UUID = Field(..., description="UUID of the event")
     slug: str = Field(..., description="Slug of tyhe given event")
-    cover_image: str = Field(..., description="Url of the cover image")
+    cover_image: str | None = Field(None, description="Url of the cover image")
 
