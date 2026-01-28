@@ -21,7 +21,7 @@ async def created_events(client, mock_user_token):
 @pytest.mark.asyncio
 async def test_create_event(client, mock_user_token):
     """Test creating event works"""
-    response = await client.post("/events/", json={
+    event_data = {
                 "title": "Future Tech Summit 2026",
                 "summary": "Join us for an immersive day exploring the latest advancements in AI and cloud computing.",
                 "content": "<p>The Future Tech Summit brings together industry leaders, developers, and innovators. <strong>Agenda includes:</strong> Keynote speeches, hands-on workshops, and networking opportunities. Lunch will be provided.</p>",
@@ -31,7 +31,11 @@ async def test_create_event(client, mock_user_token):
                 "location": "Grand Convention Center, Hall A",
                 "location_url": "https://maps.google.com/?q=Grand+Convention+Center",
                 "is_published": True,
-    })
+    }
+    response = await client.post(
+        "/events/",
+        data={"data": json.dumps(event_data)}  # Form data, not json
+    )
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Future Tech Summit 2026"
