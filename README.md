@@ -48,10 +48,6 @@ docker-compose up -d
 alembic upgrade head
 ```
 
-### Access
-- API: http://localhost:8001
-- Swagger Docs: http://localhost:8001/docs
-
 ---
 
 ## Tenant Setup
@@ -62,4 +58,3 @@ This is developer-managed. To add a client:
 
 ---
 
-**Note:** This is production code serving real businesses, not a tutorial project.
