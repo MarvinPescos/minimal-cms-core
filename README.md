@@ -20,6 +20,40 @@ A **minimal CMS API for local businesses** in your area. Built to provide zero t
 - Restaurant menus (add feature if needed only gallery and event are provided.)
 - Small business portfolios
 
+---
+
+## Getting Started
+
+### Prerequisites
+- Python 3.11+
+- Docker & Docker Compose
+- Supabase account (free tier)
+- Upstash Redis account (free tier, for production)
+
+### Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/MarvinPescos/minimal-cms-core.git
+cd minimal-cms/backend
+
+# Copy environment template
+cp .env.example .env
+# Edit .env with your Supabase/Redis credentials
+
+# Run with Docker
+docker-compose up -d
+
+# Run migrations
+alembic upgrade head
+```
+
+### Access
+- API: http://localhost:8001
+- Swagger Docs: http://localhost:8001/docs
+
+---
+
 ## Tenant Setup
 This is developer-managed. To add a client:
 1. Run migrations for their tables
