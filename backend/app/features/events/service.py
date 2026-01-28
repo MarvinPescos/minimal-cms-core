@@ -68,12 +68,13 @@ class EventService:
 
     #  === Write Operations ===
 
-    async def add_event(self, user_id: uuid.UUID, file: UploadFile ,data: EventCreate) -> Event:
+    async def add_event(self, user_id: uuid.UUID, file: UploadFile | None, data: EventCreate) -> Event:
         """
         Create a new event for a user with auto-generated unique slug.
 
         Args:
             user_id: UUID of the user creating the event.
+            file: Optional cover image file.
             data: EventCreate schema containing event title and details.
 
         Returns:
@@ -93,15 +94,16 @@ class EventService:
                 event_name=data.title
             )
 
-            contents = await validate_image_file(file)
-
-            image_url = await self.storage.upload_image(
-                file_bytes=contents,
-                user_id=user_id,
-                folder="Gallery",
-                file_name=f"{slug}.{file.content_type.split('/')[-1]}",
-                content_type=file.content_type
-            )
+            image_url = None
+            if file:
+                contents = await validate_image_file(file)
+                image_url = await self.storage.upload_image(
+                    file_bytes=contents,
+                    user_id=user_id,
+                    folder="Gallery",
+                    file_name=f"{slug}.{file.content_type.split('/')[-1]}",
+                    content_type=file.content_type
+                )
 
             return await self.repo.create(user_id=user_id, slug=slug, cover_image=image_url, **data.model_dump())
 
