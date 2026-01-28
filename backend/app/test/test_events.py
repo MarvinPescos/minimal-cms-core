@@ -1,20 +1,24 @@
 import pytest
+import json
 from httpx import AsyncClient
 
 @pytest.fixture
 async def created_events(client, mock_user_token):
     """Helper Fixture to create an event for tests that need an existing event"""
-    response = await client.post("/events/", json={        
+    event_data = {
         "title": "Future Tech Summit 2026",
         "summary": "Join us for an immersive day exploring the latest advancements in AI and cloud computing.",
-        "content": "<p>The Future Tech Summit brings together industry leaders, developers, and innovators. <strong>Agenda includes:</strong> Keynote speeches, hands-on workshops, and networking opportunities. Lunch will be provided.</p>",
-        "cover_image": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1000&q=80",
+        "content": "<p>The Future Tech Summit brings together industry leaders, developers, and innovators.</p>",
         "start_at": "2026-02-20T09:00:00Z",
         "end_at": "2026-02-20T17:00:00Z",
         "location": "Grand Convention Center, Hall A",
         "location_url": "https://maps.google.com/?q=Grand+Convention+Center",
         "is_published": True,
-    })
+    }
+    response = await client.post(
+        "/events/",
+        data={"data": json.dumps(event_data)}
+    )
     assert response.status_code == 201
     return response.json()
 
@@ -22,15 +26,14 @@ async def created_events(client, mock_user_token):
 async def test_create_event(client, mock_user_token):
     """Test creating event works"""
     event_data = {
-                "title": "Future Tech Summit 2026",
-                "summary": "Join us for an immersive day exploring the latest advancements in AI and cloud computing.",
-                "content": "<p>The Future Tech Summit brings together industry leaders, developers, and innovators. <strong>Agenda includes:</strong> Keynote speeches, hands-on workshops, and networking opportunities. Lunch will be provided.</p>",
-                "cover_image": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1000&q=80",
-                "start_at": "2026-02-20T09:00:00Z",
-                "end_at": "2026-02-20T17:00:00Z",
-                "location": "Grand Convention Center, Hall A",
-                "location_url": "https://maps.google.com/?q=Grand+Convention+Center",
-                "is_published": True,
+        "title": "Future Tech Summit 2026",
+        "summary": "Join us for an immersive day exploring the latest advancements in AI and cloud computing.",
+        "content": "<p>The Future Tech Summit brings together industry leaders.</p>",
+        "start_at": "2026-02-20T09:00:00Z",
+        "end_at": "2026-02-20T17:00:00Z",
+        "location": "Grand Convention Center, Hall A",
+        "location_url": "https://maps.google.com/?q=Grand+Convention+Center",
+        "is_published": True,
     }
     response = await client.post(
         "/events/",
@@ -105,17 +108,20 @@ async def test_update_event_not_found(client, mock_user_token):
 async def test_delete_event(client, mock_user_token):
     """Test deleting an event"""
     # First, create an event to delete
-    create_response = await client.post("/events/", json={
+    event_data = {
         "title": "Event To Delete",
         "summary": "This event will be deleted.",
         "content": "<p>Temporary event content.</p>",
-        "cover_image": "https://example.com/image.jpg",
         "start_at": "2026-03-15T10:00:00Z",
         "end_at": "2026-03-15T12:00:00Z",
         "location": "Test Location",
         "location_url": "https://maps.google.com/?q=Test+Location",
         "is_published": False,
-    })
+    }
+    create_response = await client.post(
+        "/events/",
+        data={"data": json.dumps(event_data)}
+    )
     assert create_response.status_code == 201
     event_id = create_response.json()["id"]
 
