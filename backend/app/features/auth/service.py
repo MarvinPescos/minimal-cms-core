@@ -115,6 +115,8 @@ class AuthService:
                     email=auth_response.user.email,
                     is_email_verified=auth_response.user.email_confirmed_at is not None
                 )
+
+            user = await self.repo.get_by_supabase_id(auth_response.user.id)
             
             log.info(
                 "auth.user.signed.in",
@@ -126,7 +128,7 @@ class AuthService:
                 "refresh_token": auth_response.session.refresh_token,
                 "expires_in": auth_response.session.expires_in,
                 "user": {
-                    "id": User.id,
+                    "id": user.id,
                     "email": auth_response.user.email
                 }
             }
