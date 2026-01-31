@@ -387,20 +387,19 @@ async def get_user_images(
     )
 
 
-@router.get(
-    "/images/{slug}",
-    response_model=ImageResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Get image by slug",
+@router.delete(
+    "/{event_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an image",
     description="""
-    Retrieve a specific image by its unique slug.
+    Permanently delete an image by its ID.
     
-    - **Authorization**: User can only access their own images.
-    - **SEO-Friendly**: Slug can be used as alt text.
-    - **Rate Limit**: 200 requests per minute.
+    - **Authorization**: User can only delete their own events.
+    - **Warning**: This action cannot be undone.
+    - **Rate Limit**: 100 requests per minute.
     """,
     responses={
-        200: {"description": "Image details retrieved successfully"},
+        204: {"description": "Image deleted successfully"},
         401: {"description": "User is not authenticated"},
         404: {"description": "Image not found"},
         429: {
@@ -413,15 +412,13 @@ async def get_user_images(
         }
     }
 )
-@limiter.limit(RateLimits.READ_HEAVY)
-async def get_image_by_slug(
+@limiter.limit(RateLimits.STANDARD)
+async def delete_event(
     request: Request,
-    slug: str,
+    image_id: uuid.UUID,
     current_user: AuthenticatedUser = Depends(require_auth),
     service: ImageService = Depends(get_image_service)
 ):
-    """Retrieve a specific image by its unique slug."""
-    return await service.get_image_by_slug(
-        user_id=uuid.UUID(current_user.user_id),
-        slug=slug
-    )
+    """Delete an event."""
+    await service.delete_image(uuid.UUID(current_user.user_id), image_id)
+    return None
