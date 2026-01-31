@@ -48,10 +48,13 @@ class SupabaseStorageClient:
         
         return url_response
 
-    async def delete_image(self, file_path: str) -> bool:
+    async def delete_image(self, folder: str, file_name: str,user_id: uuid.UUID) -> bool:
         """Delete an image from storage"""
         try:
             client = self._get_client()
+
+            file_path = f"{user_id}/{folder}/{file_name}"
+
             client.storage.from_(self.bucket_name).remove(file_path)
             return True
         except Exception:
