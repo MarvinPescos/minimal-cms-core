@@ -1,8 +1,10 @@
 import io
 from typing import List
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile
 from PIL import Image as PILImage
+from urllib.parse import urlparse
+from sqlalchemy.ext.asyncio import AsyncSession
+
 import uuid
 
 
@@ -205,6 +207,9 @@ class AlbumService:
             raise BaseAppException("Failed to delete album")
 
 
+# ===============================================================
+
+
 class ImageService:
     
     def __init__(self, session: AsyncSession):
@@ -292,7 +297,7 @@ class ImageService:
         # Extract image dimensions
         width, height = self._get_image_dimensions(contents)
         # Generate unique slug
-        slug = await self.repo.generate_unique_slug(album_title)
+        slug = await self.repo.generate_unique_slug(album_title, user_id)
 
         # Upload to Supabase Storage
         try:
@@ -348,7 +353,7 @@ class ImageService:
             )
             raise BaseAppException("Failed to save image to database")
 
-    # Read Operations
+    # === Read Operations ===
 
     async def get_user_images(
         self,
@@ -368,32 +373,67 @@ class ImageService:
             List of ImageResponse objects.
         """
         images = await self.repo.get_all_by_user_id(user_id=user_id, limit=limit, offset=offset)
+
+        log.info(
+            "gallery.get.images",
+            user_id=user_id
+        )
+
         return [
             ImageResponse.model_validate(img)
             for img in images
         ]
-    
-    async def get_image_by_slug(self, user_id: uuid.UUID, slug: str) -> ImageResponse:
-        """
-        Get a single image by its slug.
 
-        Args:
-            user_id: UUID of the user.  
-            slug: Unique slug identifier.
+    async def get_image(self, user_id:uuid.UUID, image_id: uuid.UUID ) -> ImageResponse:
+        """Retrieve single image"""
 
-        Returns:
-            ImageResponse object.
+        image = await self.repo.get_by_user_and_id(user_id, image_id)
 
-        Raises:
-            NotFoundError: If image with slug doesn't exist.
-        """
-        
-        image =  await self.repo.get_by_slug(slug=slug, user_id=user_id)
         if not image:
             raise NotFoundError("Image not found")
-        
-        return ImageResponse.model_validate(image)
 
+        log.info(
+            "gallery.get.single.image",
+            user_id=user_id
+        )
+    
+        return image
+
+    # === Write Operations ===
+
+    async def delete_image(self, user_id: uuid.UUID, image_id: uuid.UUID) -> None:
+        """Delete single image"""
+
+        image = await self.get_image(user_id, image_id)
+        log.info(f"User: {user_id} is deleting image '{image_id}'")
+
+        try:
+            log.info(
+                "image.deleted",
+                user_id=str(user_id),
+                event_id=str(image_id),
+            )
+
+
+            path = urlparse(image.image_url).path
+            file_name_with_extension = path.rsplit("/", 1)[-1]
+
+            await self.storage.delete_image(
+                    folder="Gallery",
+                    file_name=file_name_with_extension,
+                    user_id=user_id
+                )
+            await self.repo.delete(image)
+        except DatabaseError as e:
+            log.error(
+                "image.database.error",
+                user_id=str(user_id),
+                image_id=str(image_id),
+                error=str(e)
+            )
+            raise BaseAppException("Failed to delete image")
+
+    
     # === Public Access (no auth required) ===
 
     async def get_public_images(self, user_id: uuid.UUID, limit: int = 100, offset: int = 0):
