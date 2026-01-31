@@ -204,14 +204,16 @@ class EventService:
                 title=event.title,
             )
 
-            path = urlparse(event.cover_image).path
-            file_name_with_extension = path.rsplit("/", 1)[-1]
+            if event.cover_image:
+                path = urlparse(event.cover_image).path
+                file_name_with_extension = path.rsplit("/", 1)[-1]
 
-            await self.storage.delete_image(
+                await self.storage.delete_image(
                     folder="Events",
                     file_name=file_name_with_extension,
                     user_id=user_id
                 )
+                
             await self.repo.delete(event)
         except DatabaseError as e:
             log.error(
