@@ -47,5 +47,17 @@ class SupabaseStorageClient:
         url_response = client.storage.from_(self.bucket_name).get_public_url(file_path)
         
         return url_response
+
+    async def delete_image(self, file_path: str) -> bool:
+        """Delete an image from storage"""
+        try:
+            client = self._get_client()
+            client.storage.from_(self.bucket_name).remove(file_path)
+            return True
+        except Exception:
+            return False
         
+def get_storage_client() -> SupabaseStorageClient:
+    """Returns a storage client (wrapper is lightweight, client created per-operation)"""
+    return SupabaseStorageClient()
 

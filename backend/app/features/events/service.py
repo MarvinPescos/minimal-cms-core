@@ -7,7 +7,7 @@ from app.infrastructure.database import IntegrityConstraintError, DatabaseError
 from app.shared.errors.exceptions import BaseAppException, ConflictError, NotFoundError
 from app.infrastructure.observability import log
 from app.shared.utils.image_validation import validate_image_file
-from app.infrastructure.clients.supabase_storage import SupabaseStorageClient
+from app.infrastructure.clients.supabase_storage import get_storage_client
 
 from .repository import EventsRepository
 from .schemas import EventCreate, EventUpdate
@@ -21,7 +21,7 @@ class EventService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.repo = EventsRepository(session)
-        self.storage = SupabaseStorageClient()
+        self.storage = get_storage_client()
 
     #  === Read Operations ===
 
@@ -202,6 +202,8 @@ class EventService:
                 event_id=str(event_id),
                 title=event.title,
             )
+
+            await self.storage.delete_image(event.cover_image)
             await self.repo.delete(event)
         except DatabaseError as e:
             log.error(

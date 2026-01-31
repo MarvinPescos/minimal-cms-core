@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.clients import get_supabase_admin
 from app.features.users.repository import UserRepository
-from app.features.users.models import User
 from .schemas import SignInRequest, SignUpRequest
 from app.infrastructure.observability import log
 from app.shared.errors.exceptions import BadGatewayError, BadRequestError, UnauthorizedError
