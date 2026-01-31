@@ -4,9 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.clients import get_supabase_admin
 from app.features.users.repository import UserRepository
+from app.features.users.models import User
 from .schemas import SignInRequest, SignUpRequest
 from app.infrastructure.observability import log
 from app.shared.errors.exceptions import BadGatewayError, BadRequestError, UnauthorizedError
+
 
 class AuthService:
     """
@@ -124,7 +126,7 @@ class AuthService:
                 "refresh_token": auth_response.session.refresh_token,
                 "expires_in": auth_response.session.expires_in,
                 "user": {
-                    "id": auth_response.user.id,
+                    "id": User.id,
                     "email": auth_response.user.email
                 }
             }
