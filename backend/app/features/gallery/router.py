@@ -13,14 +13,15 @@ from .schemas import (
 from .service import AlbumService, ImageService
 from .dependencies import get_album_service, get_image_service
 
-router = APIRouter(prefix="/gallery", tags=["Gallery"])
+router_album = APIRouter(prefix="/album", tags=["Album"])
+router_image = APIRouter(prefix="/gallery", tags=["Image"])
 
 
 # ============================================================
 # Public Endpoints (no auth required - for landing pages)
 # ============================================================
 
-@router.get(
+@router_image.get(
     "/public/images",
     response_model=List[ImageResponse],
     status_code=status.HTTP_200_OK,
@@ -57,7 +58,7 @@ async def list_public_images(
     return await service.get_public_images(user_id, limit, offset)
 
 
-@router.get(
+@router_image.get(
     "/public/images/{slug}",
     response_model=ImageResponse,
     status_code=status.HTTP_200_OK,
@@ -97,7 +98,7 @@ async def get_public_image(
 # Album Endpoints (auth required - admin only)
 # ============================================================
 
-@router.post(
+@router_album.post(
     "/albums",
     response_model=AlbumResponse,
     status_code=status.HTTP_201_CREATED,
@@ -138,7 +139,7 @@ async def create_album(
     )
 
 
-@router.get(
+@router_album.get(
     "/albums",
     response_model=List[AlbumResponse],
     status_code=status.HTTP_200_OK,
@@ -174,7 +175,7 @@ async def get_albums(
     )
 
 
-@router.get(
+@router_album.get(
     "/albums/{album_id}",
     response_model=AlbumResponse,
     status_code=status.HTTP_200_OK,
@@ -214,7 +215,7 @@ async def get_album(
     )
 
 
-@router.patch(
+@router_album.patch(
     "/albums/{album_id}",
     response_model=AlbumResponse,
     status_code=status.HTTP_200_OK,
@@ -257,7 +258,7 @@ async def update_album(
     )
 
 
-@router.delete(
+@router_album.delete(
     "/albums/{album_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an album",
@@ -301,7 +302,7 @@ async def delete_album(
 # Image Endpoints (within Albums)
 # ============================================================
 
-@router.post(
+@router_image.post(
     "/albums/{album_id}/images",
     response_model=List[ImageResponse],
     status_code=status.HTTP_201_CREATED,
@@ -346,7 +347,7 @@ async def upload_images(
     )
 
 
-@router.get(
+@router_image.get(
     "/images",
     response_model=List[ImageResponse],
     status_code=status.HTTP_200_OK,
@@ -387,7 +388,7 @@ async def get_user_images(
     )
 
 
-@router.delete(
+@router_image.delete(
     "/{event_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an image",
