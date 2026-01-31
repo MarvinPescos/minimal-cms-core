@@ -203,6 +203,7 @@ async def create_event(
     if file:
         return await service.add_event(uuid.UUID(current_user.user_id), file, event_data)
     else:
+        # Cover photo would be default static image
         return await service.add_event(uuid.UUID(current_user.user_id), None, event_data)
 
 
