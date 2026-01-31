@@ -107,8 +107,12 @@ class AuthService:
             })
 
             if not auth_response.session:
-                raise UnauthorizedError("Invalid credentials or email not verified")
-
+                if auth_response.user:
+                    raise UnauthorizedError(
+                        "Please verify your email before signing in. Check your inbox for the confirmation link."
+                    )
+                raise UnauthorizedError("Invalid credentials")
+                
             if auth_response.user:
                 await self.repo.sync_from_supabase(
                     supabase_user_id=auth_response.user.id,
