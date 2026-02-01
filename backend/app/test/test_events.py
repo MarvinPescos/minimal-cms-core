@@ -1,6 +1,5 @@
 import pytest
 import json
-from httpx import AsyncClient
 
 @pytest.fixture
 async def created_events(client, mock_user_token):
