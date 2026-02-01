@@ -389,13 +389,13 @@ async def get_user_images(
 
 
 @router_image.delete(
-    "/{event_id}",
+    "/{image_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete an image",
     description="""
     Permanently delete an image by its ID.
-    
-    - **Authorization**: User can only delete their own events.
+
+    - **Authorization**: User can only delete their own images.
     - **Warning**: This action cannot be undone.
     - **Rate Limit**: 100 requests per minute.
     """,
@@ -414,12 +414,12 @@ async def get_user_images(
     }
 )
 @limiter.limit(RateLimits.STANDARD)
-async def delete_event(
+async def delete_image(
     request: Request,
     image_id: uuid.UUID,
     current_user: AuthenticatedUser = Depends(require_auth),
     service: ImageService = Depends(get_image_service)
 ):
-    """Delete an event."""
+    """Delete an image."""
     await service.delete_image(uuid.UUID(current_user.user_id), image_id)
     return None
