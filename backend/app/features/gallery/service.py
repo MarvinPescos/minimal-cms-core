@@ -25,6 +25,44 @@ class AlbumService:
         self.session = session
         self.repo = AlbumRepository(session)
 
+    # === Public services ===
+
+    async def get_all_public_album(self, user_id: uuid.UUID) -> List[Album]:
+        """
+        Retrieve all published albums for a tenant's public landing page.
+
+        Args:
+            user_id: UUID of the user (tenant) whose public albums to list.
+
+        Returns:
+            A list of Album ORM objects that are published. Includes loaded images.
+            Returns an empty list if no published albums exist.
+        """
+        log.info("album.public.fetch.all", user_id=user_id)
+        return await self.repo.get_public_albums(user_id=user_id)
+
+    async def get_public_album_by_slug(self, user_id: uuid.UUID, slug: str) -> Album:
+        """
+        Retrieve a single published album by its slug (public, no auth).
+
+        Args:
+            user_id: UUID of the user (tenant) who owns the album.
+            slug: SEO-friendly slug of the album.
+
+        Returns:
+            The Album ORM object with images loaded if found and published.
+
+        Raises:
+            NotFoundError: If no published album exists for this user with the given slug.
+        """
+        album = await self.repo.get_public_album_slug(user_id, slug)
+
+        if not album:
+            raise NotFoundError("Album not found")
+
+        log.info("album.public.get.slug", user_id=user_id, slug=slug)
+        return album
+
     # === Read Operation ===
 
     async def get_user_albums(self, user_id: uuid.UUID) -> List[Album]:

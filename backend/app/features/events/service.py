@@ -24,6 +24,41 @@ class EventService:
         self.repo = EventsRepository(session)
         self.storage = get_storage_client()
 
+    # === Public services ===
+
+    async def get_public_events(self, user_id: uuid.UUID, limit: int, offset: int):
+        """
+        Get published events for a specific user/tenant.
+
+        Args:
+            user_id: UUID of the tenant/user whose public events to retrieve.
+            limit: Maximum number of events to return.
+            offset: Number of events to skip for pagination.
+
+        Returns:
+            List of published Event objects.
+        """
+        return await self.repo.get_published_by_user(user_id, limit, offset)
+
+    async def get_public_event_by_slug(self, user_id: uuid.UUID, slug: str):
+        """
+        Get a single published event by slug for public access (SEO-friendly).
+
+        Args:
+            user_id: UUID of the tenant/user who owns the event.
+            slug: URL-friendly slug identifier for the event.
+
+        Returns:
+            The published Event object matching the slug.
+
+        Raises:
+            NotFoundError: If the event does not exist or is not published.
+        """
+        event = await self.repo.get_published_event_by_slug(user_id=user_id, slug=slug)
+        if not event:
+            raise NotFoundError("Event not found")
+        return event
+
     #  === Read Operations ===
 
     async def get_user_events(self, user_id: uuid.UUID) -> List[Event]:
@@ -224,37 +259,4 @@ class EventService:
             )
             raise BaseAppException("Failed to delete event")
 
-    # Public
 
-    async def get_public_events(self, user_id: uuid.UUID, limit: int, offset: int):
-        """
-        Get published events for a specific user/tenant.
-
-        Args:
-            user_id: UUID of the tenant/user whose public events to retrieve.
-            limit: Maximum number of events to return.
-            offset: Number of events to skip for pagination.
-
-        Returns:
-            List of published Event objects.
-        """
-        return await self.repo.get_published_by_user(user_id, limit, offset)
-
-    async def get_public_event_by_slug(self, user_id: uuid.UUID, slug: str):
-        """
-        Get a single published event by slug for public access (SEO-friendly).
-
-        Args:
-            user_id: UUID of the tenant/user who owns the event.
-            slug: URL-friendly slug identifier for the event.
-
-        Returns:
-            The published Event object matching the slug.
-
-        Raises:
-            NotFoundError: If the event does not exist or is not published.
-        """
-        event = await self.repo.get_published_event_by_slug(user_id=user_id, slug=slug)
-        if not event:
-            raise NotFoundError("Event not found")
-        return event
