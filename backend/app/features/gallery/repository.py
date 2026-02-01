@@ -84,4 +84,37 @@ class AlbumRepository(UserScopeRepository[Album]):
         )
 
         return result.scalar_one_or_none()
+    
+    async def get_public_albums(self, user_id: uuid.UUID, limit: int = 100, offset: int = 0):
+        """Get public albums by this user"""
+
+        result = await self.session.execute(
+            select(Album)
+            .options(selectinload(Album.images))
+            .where(
+                and_(
+                    Album.user_id == user_id,
+                    Album.is_published
+                )
+            )
+            .limit(limit)
+            .offset(offset)
+        )
+        return result.scalars().all()
+
+    async def get_public_album_slug(self, user_id: uuid.UUID, slug: str):
+        """Get public album by slug"""
+
+        result = await self.session.execute(
+            select(Album)
+            .options(selectinload(Album.images))
+            .where(
+                and_(
+                    Album.user_id == user_id,
+                    Album.slug == slug
+                )
+            )
+        )
+
+        return result.scalar_one_or_none()
 

@@ -94,6 +94,77 @@ async def get_public_image(
     return await service.get_public_image_by_slug(user_id, slug)
 
 
+@router_album.get(
+    "/public/{slug}",
+    response_model=AlbumResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get public album by slug",
+    description="""
+    Retrieve a single album by its SEO-friendly slug.
+    
+    - **No Authentication Required**: This is a public endpoint.
+    - **SEO-Friendly**: Uses slug instead of UUID for cleaner URLs.
+    - **Rate Limit**: 200 requests per minute.
+    """,
+    responses={
+        200: {"description": "Album details retrieved successfully"},
+        404: {"description": "Album not found or album not published"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.READ_HEAVY)
+async def get_public_album(
+    request: Request,
+    slug: str,
+    user_id: uuid.UUID,
+    service: AlbumService = Depends(get_album_service)
+):
+    """Get a single album by its slug (SEO-friendly)."""
+    return await service.get_public_album_by_slug(user_id, slug)
+
+
+@router_album.get(
+    "/public",
+    response_model=List[AlbumResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get all public album",
+    description="""
+    Retrieve all album from published albums for a tenant's landing page.
+    
+    - **No Authentication Required**: This is a public endpoint.
+    - **SEO-Friendly**: Uses slug instead of UUID for cleaner URLs.
+    - **Rate Limit**: 200 requests per minute.
+    """,
+    responses={
+        200: {"description": "Album details retrieved successfully"},
+        404: {"description": "Album not found or album not published"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.READ_HEAVY)
+async def get_all_public_albums(
+    request: Request,
+    user_id: uuid.UUID,
+    service: AlbumService = Depends(get_album_service)
+):
+    """Get all published albums for a tenant's landing page."""
+    return await service.get_all_public_album(user_id)
+
+
 # ============================================================
 # Album Endpoints (auth required - admin only)
 # ============================================================
