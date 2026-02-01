@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import uuid
 
-
 from app.infrastructure.database import IntegrityConstraintError, DatabaseError
 from app.infrastructure.clients.supabase_storage import SupabaseStorageClient
 from app.shared.errors import BaseAppException, ConflictError, BadRequestError, NotFoundError
@@ -15,7 +14,7 @@ from app.infrastructure.observability import log
 from app.shared.utils.image_validation import validate_image_file
 from .repository import AlbumRepository, ImageRepository
 from .schemas import AlbumCreate, AlbumUpdate, AlbumResponse, ImageResponse 
-from .models import Album
+from .models import Album, Image
 
 class AlbumService:
     """
@@ -28,7 +27,7 @@ class AlbumService:
 
     # === Read Operation ===
 
-    async def get_user_albums(self, user_id: uuid.UUID) -> List[AlbumResponse]:
+    async def get_user_albums(self, user_id: uuid.UUID) -> List[Album]:
         """
         Retrieve all albums belonging to a specific user.
 
@@ -42,7 +41,7 @@ class AlbumService:
         log.info("album.fetch.all", user_id=user_id)
         return await self.repo.get_all_album_with_images(user_id=user_id)
 
-    async def get_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> AlbumResponse:
+    async def get_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> Album:
         """
         Retrieve a single album by ID with ownership verification.
 
@@ -67,7 +66,7 @@ class AlbumService:
         
     # === Write Operation ===
 
-    async def create_album(self, user_id: uuid.UUID, data: AlbumCreate) -> Album:
+    async def create_album(self, user_id: uuid.UUID, data: AlbumCreate) -> AlbumResponse:
         """
         Create a new album for a user with auto-generated unique slug.
 
@@ -384,7 +383,7 @@ class ImageService:
             for img in images
         ]
 
-    async def get_image(self, user_id:uuid.UUID, image_id: uuid.UUID ) -> ImageResponse:
+    async def get_image(self, user_id:uuid.UUID, image_id: uuid.UUID ) -> Image:
         """Retrieve single image"""
 
         image = await self.repo.get_by_user_and_id(user_id, image_id)
