@@ -1,8 +1,12 @@
+from datetime import datetime, timezone
 from typing import TypeVar, Generic, Type, Optional, Any, List
 import uuid
+
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
 from .exceptions import DatabaseError, IntegrityConstraintError
 
 from app.infrastructure.observability.logging_setup import log
@@ -50,13 +54,13 @@ class BaseRepository(Generic[ModelType]):
                 original_error=e
             )
     
-    async def get_by_id(self, id: uuid) -> Optional[ModelType]:
+    async def get_by_id(self, id: uuid, include_deleted: bool = False) -> Optional[ModelType]:
         """Get record by ID"""
         try:
-            result = await self.session.execute(
-                select(self.model).
-                where(self.model.id == id)
-            )
+            query = select(self.model).where(self.model == id)
+            if not include_deleted and hasattr(self.model, "deleted_at"):
+                query = query.where(self.model.deleted_at.is_(None))
+            result = await self.session.execute(query)
             return result.scalar_one_or_none()
 
         except SQLAlchemyError as e:
@@ -72,13 +76,15 @@ class BaseRepository(Generic[ModelType]):
                 original_error=e
             )
     
-    async def get_all(self, limit: int = 100, offset: int = 0) -> List[ModelType]:
+    async def get_all(self, limit: int = 100, offset: int = 0, include_deleted: bool = False) -> List[ModelType]:
         """Get all in the model"""
         try:
-            result = await self.session.execute(
-                select(self.model).limit(limit).offset(offset)
-            )
+            query = select(self.model).limit(limit).offset(offset)
+            if not include_deleted and hasattr(self.model, 'deleted_at'):
+                query = query.where(self.model.deleted_at.is_(None))
+            result = await self.session.execute(query)
             return result.scalars().all()
+
         except SQLAlchemyError as e:
             log.error(
                 "databse.error",
@@ -138,7 +144,20 @@ class BaseRepository(Generic[ModelType]):
                 f"Failed to delete at {self.model_name}",
                 original_error=e
             )
+    
+    # === Soft Delete ===
 
+    async def soft_delete(self, db_obj: ModelType) -> ModelType:
+        """Soft delete a record by setting deleted_at"""
+        db_obj.deleted_at = datetime.now(timezone.utc)
+        await self.session.flush()
+        return db_obj
+
+    async def restore(self, db_obj: ModelType) -> ModelType:
+        """Restore a soft-deleted record"""
+        db_obj.deleted_at = None
+        await self.session.flush()
+        return db_obj
 
 
 
