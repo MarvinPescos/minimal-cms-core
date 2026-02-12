@@ -281,3 +281,110 @@ async def delete_event(
     """Delete an event."""
     await service.delete_event(uuid.UUID(current_user.user_id), event_id)
     return None
+
+@router.patch(
+    "/{event_id}/soft-delete",
+    response_model=EventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Soft delete an event",
+    description="""
+    Mark an event as deleted without removing it from the database.
+    
+    - **Authorization**: User can only soft-delete their own events.
+    - **Reversible**: Use the restore endpoint to undo.
+    - **Rate Limit**: 100 requests per minute.
+    """,
+    responses={
+        200: {"description": "Event soft-deleted successfully"},
+        401: {"description": "User is not authenticated"},
+        404: {"description": "Event not found"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.STANDARD)
+async def soft_delete_event(
+    request: Request,
+    event_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(require_auth),
+    service: EventService = Depends(get_event_service)
+):
+    """Soft delete an event (reversible)."""
+    event = await service.soft_delete(uuid.UUID(current_user.user_id), event_id)
+    return EventResponse.model_validate(event)
+
+
+@router.patch(
+    "/{event_id}/restore",
+    response_model=EventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Restore a soft-deleted event",
+    description="""
+    Restore an event that was previously soft-deleted.
+    
+    - **Authorization**: User can only restore their own events.
+    - **Rate Limit**: 100 requests per minute.
+    """,
+    responses={
+        200: {"description": "Event restored successfully"},
+        401: {"description": "User is not authenticated"},
+        404: {"description": "Event not found"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.STANDARD)
+async def restore_event(
+    request: Request,
+    event_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(require_auth),
+    service: EventService = Depends(get_event_service)
+):
+    """Restore a soft-deleted event."""
+    event = await service.restore(uuid.UUID(current_user.user_id), event_id)
+    return EventResponse.model_validate(event)
+
+@router.get(
+    "/deleted/",
+    response_model=list[EventResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get deleted event details",
+    description="""
+    Retrieve all deleted events.
+    
+    - **Authorization**: User can only access their own events.
+    - **Rate Limit**: 200 requests per minute.
+    """,
+    responses={
+        200: {"description": "Deleted events retrieved successfully"},
+        401: {"description": "User is not authenticated"},
+        429: {
+            "description": "Too Many Requests - Rate limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {"error": "Rate limit exceeded"}
+                }
+            }
+        }
+    }
+)
+@limiter.limit(RateLimits.READ_HEAVY)
+async def get_deleted_event(
+    request: Request,
+    current_user: AuthenticatedUser = Depends(require_auth),
+    service: EventService = Depends(get_event_service)
+):
+    """Get a specific event by ID."""
+    return await service.get_all_deleted(uuid.UUID(current_user.user_id))

@@ -18,7 +18,8 @@ class EventsRepository(UserScopeRepository[Event]):
             .where(
                 and_(
                     self.model.user_id == user_id,
-                    self.model.is_published
+                    self.model.is_published,
+                    self.model.deleted_at.is_(None)
                 )
             )
             .order_by(self.model.start_at)
@@ -35,7 +36,8 @@ class EventsRepository(UserScopeRepository[Event]):
                 and_(
                     self.model.user_id == user_id,
                     self.model.slug == slug,
-                    self.model.is_published
+                    self.model.is_published,
+                    self.model.deleted_at.is_(None)
                 )
             )
         )

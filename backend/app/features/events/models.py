@@ -4,11 +4,11 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 
-from app.infrastructure.database import Base, TimestampMixin
+from app.infrastructure.database import Base, TimestampMixin, SoftDeleteMixin
 from app.features.users.models import User
 
 
-class Event(Base, TimestampMixin):
+class Event(Base, TimestampMixin, SoftDeleteMixin):
     
     __tablename__ = "events"
 

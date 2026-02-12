@@ -1,5 +1,5 @@
 from time import timezone
-from pydantic import BaseModel, Field, AfterValidator
+from pydantic import BaseModel, Field, AfterValidator, ConfigDict
 from typing import Annotated
 from datetime import datetime, timezone
 import uuid
@@ -50,6 +50,8 @@ class EventUpdate(BaseModel):
 
 class EventResponse(EventBase):
     """Schema for returning an event"""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: uuid.UUID = Field(..., description="UUID of the event")
     slug: str = Field(..., description="Slug of tyhe given event")
     cover_image: str | None = Field(None, description="Url of the cover image")

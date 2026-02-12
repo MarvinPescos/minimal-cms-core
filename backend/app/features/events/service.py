@@ -259,4 +259,93 @@ class EventService:
             )
             raise BaseAppException("Failed to delete event")
 
+    async def soft_delete(self, user_id: uuid.UUID, event_id: uuid.UUID):
+        """
+        Soft delete an event owned by the given user.
+
+        This marks the event as deleted (sets deleted_at) without removing the row
+        from the database, so it can be restored later.
+
+        Args:
+            user_id: UUID of the user who owns the event.
+            event_id: UUID of the event to soft delete.
+
+        Returns:
+            The soft-deleted Event ORM instance.
+
+        Raises:
+            NotFoundError: If the event does not exist or does not belong to the user.
+            BaseAppException: If a database error occurs during soft delete.
+        """
+        event = await self.repo.get_by_user_and_id_is_deleted(user_id=user_id, event_id=event_id)
+
+        try:
+            log.info(
+                "event.soft.delete",
+                user_id=user_id,
+                event_id=event_id,
+                title=event.title
+            )
+            return await self.repo.soft_delete(event)
+        except DatabaseError as e:
+            log.error(
+                "event.database.error",
+                user_id=str(user_id),
+                event_id=str(event_id),
+                error=str(e)
+            )
+            raise BaseAppException("Failed to soft delete event")
+
+    async def restore(self, user_id: uuid.UUID, event_id: uuid.UUID):
+        """
+        Restore a previously soft-deleted event owned by the given user.
+
+        This clears the deleted_at timestamp so the event becomes visible again
+        in normal queries.
+
+        Args:
+            user_id: UUID of the user who owns the event.
+            event_id: UUID of the event to restore.
+
+        Returns:
+            The restored Event ORM instance.
+
+        Raises:
+            NotFoundError: If the soft-deleted event does not exist or does not belong to the user.
+            BaseAppException: If a database error occurs during restore.
+        """
+        event = await self.repo.get_by_user_and_id_is_deleted(user_id=user_id, event_id=event_id)
+
+        try:
+            log.info(
+                "event.restore",
+                user_id=user_id,
+                event_id=event_id,
+                title=event.title
+            )
+            return await self.repo.restore(event)
+        except DatabaseError as e:
+            log.error(
+                "event.database.error",
+                user_id=str(user_id),
+                event_id=str(event_id),
+                error=str(e)
+            )
+            raise BaseAppException("Failed to restore event")
+
+    async def get_all_deleted(self, user_id: uuid.UUID):
+        """
+        Retrieve all soft-deleted events for a given user.
+
+        Args:
+            user_id: UUID of the user whose soft-deleted events to retrieve.
+
+        Returns:
+            A list of Event ORM instances that have been soft-deleted for this user.
+        """
+        events = await self.repo.get_all_by_user_id_is_deleted(user_id=user_id)
+        log.info("events.get.all.is_deleted", user_id=user_id)
+        return events
+
+
 
