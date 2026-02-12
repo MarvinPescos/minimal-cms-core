@@ -38,10 +38,10 @@ class User(Base, TimestampMixin):
         back_populates="user",
         cascade="all, delete-orphan"
     )
-    tenant_member: Mapped[list["TenantMembers"]] = relationship(
+    memberships: Mapped[list["TenantMembers"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
     )
-
+    
     def __repr__(self):
         return f"<User {self.email}>"
