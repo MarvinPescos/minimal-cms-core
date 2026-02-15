@@ -9,7 +9,7 @@ from app.infrastructure.database import Base, TimestampMixin
 if (TYPE_CHECKING):
     from app.features.events import Event
     from app.features.gallery.models import Album
-    from backend.app.features.tenants.model import TenantMembers
+    from app.features.tenants.models import TenantMembers
 
 
 class User(Base, TimestampMixin):
