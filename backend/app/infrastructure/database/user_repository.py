@@ -40,7 +40,8 @@ class UserScopeRepository(BaseRepository[ModelType]):
             except ValueError:
                 conditions.append(self.model.slug == identifier)
 
-            conditions.append(self.model.tenant_id == tenant_id)
+            if tenant_id is not None and hasattr(self.model, "tenant_id"):
+                conditions.append(self.model.tenant_id == tenant_id)
 
             if content_type_id:
                 conditions.append(self.model.content_type_id == content_type_id)
@@ -121,7 +122,7 @@ class UserScopeRepository(BaseRepository[ModelType]):
         counter = 1
 
         while True:
-            existing = await self.get_one(tenant_id, slug)
+            existing = await self.get_one(tenant_id , slug)
 
             if not existing: #if it not exist matik break then return ang slug
                 break
