@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, String, ForeignKey
+from sqlalchemy import Boolean, String, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid, enum
@@ -25,7 +25,7 @@ class Tenant(Base, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    tenant_member: Mapped[list["TenantMembers"]] = relationship(
+    members: Mapped[list["TenantMembers"]] = relationship(
         back_populates="tenant",
         cascade="all, delete-orphan"
     )
@@ -49,7 +49,10 @@ class TenantMembers(Base, TimestampMixin):
         nullable=False
     )
     role: Mapped[str] = mapped_column(String(50), nullable=False, default=TenantRole.MEMBER.value)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    user: Mapped["User"] = relationship(back_populates="tenant_members")
-    tenant: Mapped["Tenant"] = relationship(back_populates="tenant_members")
+    user: Mapped["User"] = relationship(back_populates="memberships", lazy="selectin")
+    tenant: Mapped["Tenant"] = relationship(back_populates="members", lazy="selectin")
+
+    __table_args__ = (
+        Index("ix_tenant_members_user_tenant", "user_id", "tenant_id", unique=True)  
+    )

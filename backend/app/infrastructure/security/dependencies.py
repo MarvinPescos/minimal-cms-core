@@ -28,14 +28,14 @@ class AuthenticatedUser(BaseModel):
     role: str = Field(default="user", description="User role")
     raw_payload: dict = Field(..., description="Raw JWT payload")
 
-    def has_role(self, role: str) -> bool:
-        """ Check if user has specific role """
-        return self.role == role
-
     # I don't need this yet, but keeping it just in case.
-    # def is_admin(self) -> bool:
-    #     """ Check if user is admin"""
-    #     return self.role == "admin" or self.role == "service_role"
+    # def has_role(self, role: str) -> bool:
+    #     """ Check if user has specific role """
+    #     return self.role == role
+
+    def is_admin(self) -> bool:
+        """ Check if user is admin"""
+        return self.role == "admin"
 
     class Config:
         extra="forbid"
@@ -67,7 +67,7 @@ async def get_current_user(
         email = payload.get("email")
         user_db = await user_repo.sync_from_supabase(supabase_user_id, email)
 
-        role = payload.get("role", "user")
+        role = payload.get("app_metadata", {}).get("role", "user")
 
         log.debug(f"Authenticated user: {user_db.id}")
 
@@ -92,17 +92,16 @@ def require_auth(user: AuthenticatedUser = Depends(get_current_user)) -> Authent
     """   
     return user
 
-# PS: I don't need this, so I'll just comment it out in case someone needs it.
 
-# def require_admin(user: AuthenticatedUser = Depends(get_current_user)) -> AuthenticatedUser:
-#     """
-#         Require admin role.
-#     """
-#     if not user.is_admin():
-#         raise HTTPException(
-#             status_code=status.HTTP_403_FORBIDDEN,
-#             detail="Admin access required"
-#         )
-#     return user
+def require_admin(user: AuthenticatedUser = Depends(get_current_user)) -> AuthenticatedUser:
+    """
+        Require admin role.
+    """
+    if not user.is_admin():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return user
 
  

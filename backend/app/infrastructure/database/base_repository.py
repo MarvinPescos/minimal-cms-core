@@ -54,15 +54,15 @@ class BaseRepository(Generic[ModelType]):
                 original_error=e
             )
     
-    async def get_by_id(self, id: uuid, include_deleted: bool = False) -> Optional[ModelType]:
+    # Admin purposes
+    async def get_by_id(self, id: uuid) -> Optional[ModelType]:
         """Get record by ID"""
         try:
-            query = select(self.model).where(self.model == id)
-            if not include_deleted and hasattr(self.model, "deleted_at"):
-                query = query.where(self.model.deleted_at.is_(None))
-            result = await self.session.execute(query)
+            result = await self.session.execute(
+                select(self.model)
+                .where(self.model.id == id)
+            )
             return result.scalar_one_or_none()
-
         except SQLAlchemyError as e:
             log.error(
                 "database.error",
@@ -76,18 +76,20 @@ class BaseRepository(Generic[ModelType]):
                 original_error=e
             )
     
-    async def get_all(self, limit: int = 100, offset: int = 0, include_deleted: bool = False) -> List[ModelType]:
+    # Admin purposes
+    async def get_all(self, limit: int = 100, offset: int = 0) -> List[ModelType]:
         """Get all in the model"""
         try:
-            query = select(self.model).limit(limit).offset(offset)
-            if not include_deleted and hasattr(self.model, 'deleted_at'):
-                query = query.where(self.model.deleted_at.is_(None))
-            result = await self.session.execute(query)
+            result = await self.session.execute(
+                select(self.model)
+                .limit(limit)
+                .offset(offset)
+            )
             return result.scalars().all()
 
         except SQLAlchemyError as e:
             log.error(
-                "databse.error",
+                "database.error",
                 model=self.model_name,
                 operation="get_all",
                 error=str(e)
@@ -101,7 +103,7 @@ class BaseRepository(Generic[ModelType]):
         """Update a record"""
         try:
             for key, value in data.items():
-                if hasattr(db_obj, key) and value is not None:
+                if hasattr(db_obj, key):
                     setattr(db_obj, key, value )
             await self.session.flush()
             return db_obj
