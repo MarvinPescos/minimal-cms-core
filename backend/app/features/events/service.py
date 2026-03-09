@@ -72,7 +72,7 @@ class EventService:
             A list of Event objects belonging to the user.
             Returns an empty list if no events exist.
         """
-        log.info("events.fetch.all", user_id=user_id)
+        log.info("events.get.all", user_id=user_id)
         return await self.repo.get_all_by_user_id(user_id=user_id)
 
     async def get_event(self, user_id: uuid.UUID, event_id: uuid.UUID) -> Event:
@@ -95,7 +95,7 @@ class EventService:
             raise NotFoundError("Event not found")
 
         log.info(
-            "events.fetch",
+            "events.get",
             user_id=user_id,
             event_id=event_id,
         )
