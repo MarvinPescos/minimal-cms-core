@@ -9,8 +9,7 @@ from app.features.users.models import User
 
 
 class TenantRole(str, enum.Enum):
-    S_ADMIN = "super_admin"
-    ADMIN = "admin"
+    OWNER = "owner"
     MEMBER = "member"
 
 class Tenant(Base, TimestampMixin):
@@ -49,10 +48,11 @@ class TenantMembers(Base, TimestampMixin):
         nullable=False
     )
     role: Mapped[str] = mapped_column(String(50), nullable=False, default=TenantRole.MEMBER.value)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     user: Mapped["User"] = relationship(back_populates="memberships", lazy="selectin")
     tenant: Mapped["Tenant"] = relationship(back_populates="members", lazy="selectin")
 
     __table_args__ = (
-        Index("ix_tenant_members_user_tenant", "user_id", "tenant_id", unique=True)  
+        Index("ix_tenant_members_user_tenant", "user_id", "tenant_id", unique=True),
     )

@@ -2,12 +2,12 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.infrastructure.database import UserScopeRepository
+from app.infrastructure.database import TenantScopeRepository
 from app.infrastructure.observability import log
 from app.features.users.models import User
 
 
-class UserRepository(UserScopeRepository[User]):
+class UserRepository(TenantScopeRepository[User]):
     """Repository pattern for user data access"""
 
     def __init__(self, session: AsyncSession):

@@ -1,5 +1,5 @@
 from .base import Base, TimestampMixin, SoftDeleteMixin
-from .user_repository import UserScopeRepository
+from .tenant_scoped_repository import TenantScopeRepository
 from .session import get_db, close_db
 from .exceptions import (
     DatabaseError,
@@ -13,7 +13,7 @@ __all__ = [
     "TimestampMixin",
     "SoftDeleteMixin",
     # UserRepo
-    "UserScopeRepository",
+    "TenantScopeRepository",
     # Exceptions
     "DatabaseError",
     "DatabaseConnectionError",

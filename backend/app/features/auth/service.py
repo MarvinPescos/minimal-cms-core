@@ -41,11 +41,11 @@ class AuthService:
             auth_response = self.supabase.auth.sign_up({
                 "email": data.email,
                 "password": data.password,
-                "options": {
-                    "data": {
-                        "username": data.username
-                    }
-                }
+                # "options": {
+                #     "data": {
+                #         "username": data.username
+                #     }
+                # }
             })
 
             if not auth_response.user:

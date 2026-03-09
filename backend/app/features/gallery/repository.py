@@ -1,10 +1,10 @@
-from app.infrastructure.database import UserScopeRepository
+from app.infrastructure.database import TenantScopeRepository
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 from .models import  Image, Album
 import uuid
 
-class ImageRepository(UserScopeRepository[Image]):
+class ImageRepository(TenantScopeRepository[Image]):
     """Repository pattern for Gallery"""
 
     def __init__(self, session):
@@ -45,7 +45,7 @@ class ImageRepository(UserScopeRepository[Image]):
         )
         return result.scalar_one_or_none()
 
-class AlbumRepository(UserScopeRepository[Album]):
+class AlbumRepository(TenantScopeRepository[Album]):
     """Repository pattern for Gallery"""
 
     def __init__(self, session):

@@ -8,10 +8,12 @@ from app.core import settings
 
 from app.infrastructure.cache import limiter, rate_limit_exceeded_handler
 from app.features.auth import router as auth_router
-from app.features.events import router as event_router
+# from app.features.events import router as event_router
 from app.features.gallery import router_image as image_router
 from app.features.gallery import router_album as album_router
 from app.features.tenants import router_tenant as tenant_router
+from app.features.tenants import router_tenant_member as tenant_member_router
+
 
 
 app = FastAPI()
@@ -38,9 +40,11 @@ async def app_exception_handler(request: Request, exc: BaseAppException):
     )
 
 app.include_router(auth_router)
-app.include_router(event_router)
+# app.include_router(event_router)
 app.include_router(album_router)
 app.include_router(image_router)
 app.include_router(tenant_router)
+app.include_router(tenant_member_router)
+
 
 
