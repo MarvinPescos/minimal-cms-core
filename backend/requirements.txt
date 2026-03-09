@@ -25,7 +25,7 @@ fastapi-cache2[redis]
 structlog
 
 # Supabase
-supabase
+supabase==2.11.0
 pyjwt[crypto]
 cryptography
 
