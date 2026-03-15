@@ -1,10 +1,12 @@
+from slugify import slugify
+from app.infrastructure.database import BaseRepository
 from app.infrastructure.database import TenantScopeRepository
 from sqlalchemy import select
 import uuid
 
 from .models import Tenant, TenantMembers
 
-class TenantRepository(TenantScopeRepository[Tenant]):
+class TenantRepository(BaseRepository[Tenant]):
     """Repository pattern for Tenant"""
 
     def __init__(self , session):
@@ -21,6 +23,22 @@ class TenantRepository(TenantScopeRepository[Tenant]):
             select(self.model).where(condition)
         )
         return result.scalar_one_or_none()
+
+    async def generate_unique_slug(self, base_text: str, tenant_id: uuid.UUID | None = None) -> str:
+        base_slug = slugify(base_text)
+        slug = base_slug
+        counter = 1
+
+        while True:
+            existing = await self.get_by_identifier(identifier=slug)
+
+            if not existing: #if it not exist matik break then return ang slug
+                break
+            
+            slug = f"{base_slug}-{counter}"
+            counter +=1
+        
+        return slug
     
     # === Custom Methods ===
 

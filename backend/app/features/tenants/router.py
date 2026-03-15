@@ -2,8 +2,6 @@ from fastapi import APIRouter, Depends, status, Request
 from typing import List, Required
 import uuid
 
-from starlette.status import HTTP_200_OK, HTTP_204_NO_CONTENT
-
 from app.infrastructure.security import require_admin, AuthenticatedUser, require_auth
 from app.infrastructure.cache import limiter, RateLimits
 from .schemas import ( 
