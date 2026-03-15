@@ -28,15 +28,15 @@ class ContentType(Base, TimestampMixin):
     json_schema :  Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    tenant = Mapped["Tenant"] = relationship(lazy="selectin")
-    entries = Mapped[list["ContentEntry"]] = relationship(
+    tenant: Mapped["Tenant"] = relationship(lazy="selectin")
+    entries: Mapped[list["ContentEntry"]] = relationship(
         back_populates="content_type", 
         cascade="all, delete-orphan"
     )
 
     __table_args__ = (Index(
         "ix_content_types_tenant_names", "tenant_id", "name", unique=True
-    ))
+    ),)
 
 class ContentEntry(Base, TimestampMixin):
     __tablename__ = "content_entries"
@@ -56,16 +56,14 @@ class ContentEntry(Base, TimestampMixin):
         ForeignKey("content_types.id", ondelete="CASCADE"),
         nullable=False
     )
-    created_by: Mapped[uuid.UUID] = relationship(
+    created_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        ondelete="SET NULL",
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
-    updated_by: Mapped[uuid.UUID] = relationship(
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id"),
-        ondelete="SET NULL",
+        ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
     slug: Mapped[str] = mapped_column(String(150), nullable=False)
