@@ -4,7 +4,7 @@ from typing import Any
 import uuid
 
 class ContentTypeCreate(BaseModel):
-    mame: str = Field(
+    name: str = Field(
         min_length=3, 
         max_lenght=150, 
         pattern=r"^[a-z][a-z0-9_]*$",
@@ -49,7 +49,7 @@ class ContentTypeResponse(BaseModel):
     json_schema: dict
     is_active: bool
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,6 +87,6 @@ class ContentEntryResponse(BaseModel):
     is_published: bool
     sort_order: int
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)

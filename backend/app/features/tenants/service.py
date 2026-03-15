@@ -129,7 +129,7 @@ class TenantMemberService:
         log.info(
             "tenant.member.get",
             tenant_id=tenant_id,
-            tenant_member_id=identifier
+            identifier=identifier
         )
         
         return self._to_staff_response(member)
