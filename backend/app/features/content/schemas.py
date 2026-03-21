@@ -55,7 +55,7 @@ class ContentTypeResponse(BaseModel):
 
 # === ContentEntry Schema === 
 
-class ContentEntryBase(BaseModel):
+class ContentEntryCreate(BaseModel):
     title: str = Field(min_length=3 ,max_length=255)
     summary: str | None = Field(None, max_length=500)
     data: dict[str, Any] = Field(..., description="Content payload — validated against the content type's json_schema")
