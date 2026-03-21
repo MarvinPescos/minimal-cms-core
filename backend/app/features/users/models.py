@@ -30,10 +30,10 @@ class User(Base, TimestampMixin):
 
     #=== relationships ===
 
-    events: Mapped[list["Event"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan"
-    )
+    # events: Mapped[list["Event"]] = relationship(
+    #     back_populates="user",
+    #     cascade="all, delete-orphan"
+    # )
     albums: Mapped[list["Album"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
