@@ -147,19 +147,6 @@ class BaseRepository(Generic[ModelType]):
                 original_error=e
             )
     
-    # === Soft Delete ===
-
-    async def soft_delete(self, db_obj: ModelType) -> ModelType:
-        """Soft delete a record by setting deleted_at"""
-        db_obj.deleted_at = datetime.now(timezone.utc)
-        await self.session.flush()
-        return db_obj
-
-    async def restore(self, db_obj: ModelType) -> ModelType:
-        """Restore a soft-deleted record"""
-        db_obj.deleted_at = None
-        await self.session.flush()
-        return db_obj
 
 
 
