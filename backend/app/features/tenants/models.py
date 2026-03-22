@@ -1,11 +1,15 @@
 from sqlalchemy import Boolean, String, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
+from typing import TYPE_CHECKING
 import uuid, enum
 
 
 from app.infrastructure.database import Base, TimestampMixin
 from app.features.users.models import User
+
+if (TYPE_CHECKING):
+    from app.features.gallery.models import Album
 
 
 class TenantRole(str, enum.Enum):
@@ -24,6 +28,10 @@ class Tenant(Base, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    albums: Mapped[list["Album"]] = relationship(
+        back_populates="tenant",
+        cascade="all, delete-orphan"
+    )
     members: Mapped[list["TenantMembers"]] = relationship(
         back_populates="tenant",
         cascade="all, delete-orphan"
