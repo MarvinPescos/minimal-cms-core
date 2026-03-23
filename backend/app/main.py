@@ -11,8 +11,14 @@ from app.features.auth import router as auth_router
 # from app.features.events import router as event_router
 from app.features.gallery import router_image as image_router
 from app.features.gallery import router_album as album_router
-from app.features.tenants import router_tenant as tenant_router
-from app.features.tenants import router_tenant_member as tenant_member_router
+from app.features.tenants import (
+    router_tenant as tenant_router,
+    router_tenant_member as tenant_member_router
+)
+from app.features.content import (
+    router_content_type as content_type_router,
+    router_content_entry as content_entry_router,
+)
 
 
 
@@ -45,6 +51,8 @@ app.include_router(album_router)
 app.include_router(image_router)
 app.include_router(tenant_router)
 app.include_router(tenant_member_router)
+app.include_router(content_type_router)
+app.include_router(content_entry_router)
 
 
 
