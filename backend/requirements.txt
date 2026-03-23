@@ -34,3 +34,6 @@ python-slugify
 
 # Image Processing
 Pillow
+
+# json validation
+jsonschema
