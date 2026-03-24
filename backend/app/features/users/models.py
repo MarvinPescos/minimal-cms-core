@@ -7,8 +7,8 @@ import uuid
 from app.infrastructure.database import Base, TimestampMixin
 
 if (TYPE_CHECKING):
-    from app.features.events import Event
-    from app.features.gallery.models import Album
+    # from app.features.events import Event
+    # from app.features.gallery.models import Album
     from app.features.tenants.models import TenantMembers
 
 
@@ -30,14 +30,6 @@ class User(Base, TimestampMixin):
 
     #=== relationships ===
 
-    # events: Mapped[list["Event"]] = relationship(
-    #     back_populates="user",
-    #     cascade="all, delete-orphan"
-    # )
-    albums: Mapped[list["Album"]] = relationship(
-        back_populates="user",
-        cascade="all, delete-orphan"
-    )
     memberships: Mapped[list["TenantMembers"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan"
