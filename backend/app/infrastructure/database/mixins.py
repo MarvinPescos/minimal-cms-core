@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from typing import Optional
+
 
 
 class SoftDeleteMixin:
@@ -24,8 +26,8 @@ class SoftDeleteMixin:
 
 class PublishableMixin:
 
-    def _build_conditions(self, published_only=False, **kwargs):
+    def _build_conditions(self, is_published: Optional[bool] = None, **kwargs):
         conditions = super()._build_conditions(**kwargs)
-        if published_only:
-            conditions.append(self.model.is_published == True)
+        if is_published is not None:  # None = no filter, True/False = filter
+            conditions.append(self.model.is_published == is_published)
         return conditions

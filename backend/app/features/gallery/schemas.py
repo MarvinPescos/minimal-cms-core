@@ -52,7 +52,7 @@ class AlbumResponse(BaseModel):
     slug: str
     cover_url: str | None = None
     is_published: bool
-    images: List[ImageResponse] = []
+
 
 
 
