@@ -12,7 +12,11 @@ from .repository import ContentEntryRepository, ContentTypeRepository
 from .schemas import ContentTypeCreate, ContentTypeUpdate, ContentEntryCreate, ContentEntryUpdate
 
 class ContentTypeService:
-    """"""
+    """
+    Service responsible for tenant-scoped *content type* management.
+
+    A content type defines the JSON schema used to validate content entry payloads.
+    """
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -20,12 +24,32 @@ class ContentTypeService:
     
 
     async def get_all_content_type(self, tenant_id: uuid.UUID) -> List[ContentType]:
-        """"""
+        """
+        List all content types for a given tenant.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+
+        Returns:
+            List of `ContentType` records belonging to the tenant.
+        """
         log.info("content.type.get.all", tenant_id=tenant_id)
         return await self.repo.get_many(tenant_id)
 
     async def get_content_type(self, tenant_id:uuid.UUID, content_type_id: uuid.UUID) -> ContentType:
-        """"""
+        """
+        Fetch a single content type by ID within a tenant.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            content_type_id: Content type UUID.
+
+        Returns:
+            The matching `ContentType`.
+
+        Raises:
+            NotFoundError: If the content type does not exist in the tenant.
+        """
         content_type = await self.repo.get_one(tenant_id, content_type_id)
 
         if not content_type:
@@ -40,7 +64,20 @@ class ContentTypeService:
         return content_type
     
     async def create_content_type(self, tenant_id: uuid, data: ContentTypeCreate) -> ContentType:
-        """"""
+        """
+        Create a new tenant-scoped content type.
+
+        Args:
+            tenant_id: Tenant that owns the content type.
+            data: Payload containing the content type definition.
+
+        Returns:
+            The created `ContentType`.
+
+        Raises:
+            ConflictError: If constraints (e.g., uniqueness) are violated.
+            BaseAppException: For unexpected database errors.
+        """
         try:
         
             content_type = await self.repo.create(tenant_id=tenant_id, **data.model_dump())
@@ -67,7 +104,22 @@ class ContentTypeService:
             raise BaseAppException("Failed to save content") 
 
     async def update_content_type(self, tenant_id: uuid.UUID, content_type_id: uuid.UUID, data: ContentTypeUpdate) -> ContentType:
-        """"""  
+        """
+        Partially update an existing content type.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            content_type_id: UUID of the content type to update.
+            data: Partial update payload.
+
+        Returns:
+            The updated `ContentType`.
+
+        Raises:
+            NotFoundError: If the content type does not exist.
+            ConflictError: If constraints are violated.
+            BaseAppException: For unexpected database errors.
+        """
         content_type = await self.get_content_type(tenant_id, content_type_id)
         try:
             updated_data = data.model.dump(exclude_unset=True)
@@ -96,6 +148,17 @@ class ContentTypeService:
             raise BaseAppException("Failed to update tenant content type")
 
     async def delete_content_type(self, tenant_id: uuid.UUID, content_type_id: uuid.UUID) -> None:        
+        """
+        Permanently delete a tenant-scoped content type.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            content_type_id: UUID of the content type to delete.
+
+        Raises:
+            NotFoundError: If the content type does not exist.
+            BaseAppException: For unexpected database errors.
+        """
         content_type = await self.get_content_type(tenant_id, content_type_id)
 
         try:
@@ -123,12 +186,33 @@ class ContentEntryService:
 
 
     async def get_all_content_entry(self, tenant_id: uuid.UUID, content_type_id: uuid.UUID | None = None) -> List[ContentEntry]:
-        """"""
+        """
+        List content entries for a tenant, optionally scoped to a specific content type.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            content_type_id: Optional UUID of a content type to filter by.
+
+        Returns:
+            List of `ContentEntry` records.
+        """
         log.info("content.entry.get.all", tenant_id=tenant_id, content_type_id=content_type_id)
         return await self.repo.get_all_content_entry(tenant_id, content_type_id)
 
     async def get_one_content_entry(self, tenant_id: uuid.UUID, identifier: uuid.UUID | str) -> ContentEntry:
-        """"""
+        """
+        Fetch a single content entry by UUID or slug within a tenant.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID (direct ID) or string (slug).
+
+        Returns:
+            The matching `ContentEntry`.
+
+        Raises:
+            NotFoundError: If the entry does not exist in the tenant.
+        """
         log.info("content.entry.get.one")
         entry = await self.repo.get_one(tenant_id, identifier)
 
@@ -144,7 +228,26 @@ class ContentEntryService:
         data: ContentEntryCreate,
         user_id: str
     ) -> ContentEntry:
-        """"""
+        """
+        Create a new content entry for a tenant.
+
+        The entry payload is validated against the JSON schema defined by the selected content type.
+
+        Args:
+            tenant_id: Tenant that owns the entry.
+            content_type_identifier: UUID or slug identifying the content type.
+            data: Entry creation payload (typed fields + title + `data` JSON object).
+            user_id: UUID string of the user creating the entry (stored as `created_by`).
+
+        Returns:
+            The created `ContentEntry`.
+
+        Raises:
+            NotFoundError: If the referenced content type does not exist.
+            BadRequestError: If the payload does not validate against the content type schema.
+            ConflictError: If database constraints are violated (e.g., uniqueness).
+            BaseAppException: For unexpected database errors.
+        """
         content_type = await self.content_type_repo.get_one(tenant_id, content_type_identifier)
         if not content_type:
             raise NotFoundError("Content type was not found")
@@ -194,7 +297,26 @@ class ContentEntryService:
         data: ContentEntryUpdate, 
         user_id: str
     ) -> ContentEntry:
-        """"""
+        """
+        Partially update an existing content entry.
+
+        If the update includes a new `data` payload, it is validated against the content type JSON schema.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID or slug identifying the entry.
+            data: Partial update payload.
+            user_id: UUID string of the user performing the update (stored as `updated_by`).
+
+        Returns:
+            The updated `ContentEntry`.
+
+        Raises:
+            NotFoundError: If the entry does not exist.
+            BadRequestError: If the updated JSON payload fails schema validation.
+            ConflictError: If database constraints are violated.
+            BaseAppException: For unexpected database errors.
+        """
         entry = await self.get_one_content_entry(tenant_id, identifier)
  
         updated_data = data.model_dump(exclude_unset=True)
@@ -232,7 +354,17 @@ class ContentEntryService:
             raise BaseAppException("Failed to update content entry") 
         
     async def delete_content_entry(self, tenant_id: uuid.UUID,  identifier: uuid.UUID | str) -> None:
-        """"""
+        """
+        Permanently delete a content entry within a tenant.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID or slug identifying the entry.
+
+        Raises:
+            NotFoundError: If the entry does not exist.
+            BaseAppException: For unexpected database errors.
+        """
         entry = await self.get_one_content_entry(tenant_id, identifier)
 
         try:
