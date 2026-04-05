@@ -11,8 +11,9 @@ from app.shared.errors.exceptions import BadGatewayError, BadRequestError, Unaut
 
 class AuthService:
     """
-    Authentication service handling Supabase auth operations
-    and syncing with local database.
+    Service responsible for authentication and identity management.
+
+    Handles Supabase auth operations and synchronizes user data with the local database.
     """
 
     def __init__(self, session: AsyncSession):
@@ -28,12 +29,11 @@ class AuthService:
             data: SignUpRequest containing email, password, and username.
 
         Returns:
-            A dict containing user_id, email, and requires_email_confirmation flag.
-            If email confirmation is enabled, session will be None until verified.
+            A dictionary containing the created user's ID and confirmation status.
 
         Raises:
-            BadRequestError: If user already exists or sign up fails.
-            BadGatewayError: If Supabase connection fails.
+            BadRequestError: If the user already exists or sign-up fails.
+            BadGatewayError: If the Supabase connection fails.
         """
         try:
 
@@ -93,10 +93,10 @@ class AuthService:
             data: SignInRequest containing email and password.
 
         Returns:
-            A dict containing access_token, refresh_token, expires_in, and user info.
+            A dictionary containing session tokens and user information.
 
         Raises:
-            UnauthorizedError: If credentials are invalid or email not verified.
+            UnauthorizedError: If credentials are invalid or email is not verified.
         """
 
         try:
@@ -143,16 +143,16 @@ class AuthService:
 
     def resend_verification_email(self, email: str) -> dict:
         """
-        Resend verification email for unverified users.
+        Resend the verification email for an unverified user.
 
         Args:
-            email: The email address to send verification to.
+            email: The email address to send the verification to.
 
         Returns:
-            A dict containing a success message.
+            A dictionary containing a success message.
 
         Raises:
-            BadRequestError: If email cannot be sent (user not found, already verified, etc.).
+            BadRequestError: If the email cannot be sent (e.g., user not found).
         """
         try:
             self.supabase.auth.resend({
