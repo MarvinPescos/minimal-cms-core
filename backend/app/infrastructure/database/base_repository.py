@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 from typing import TypeVar, Generic, Type, Optional, Any, List
+from slugify import slugify
 import uuid
-
+import secrets
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from .exceptions import DatabaseError, IntegrityConstraintError
@@ -146,7 +147,31 @@ class BaseRepository(Generic[ModelType]):
                 f"Failed to delete at {self.model_name}",
                 original_error=e
             )
-    
+
+    async def generate_unique_slug(
+        self,
+        base_text: str,
+        *scope_conditions
+    ) -> str:
+        base_slug = slugify(base_text)
+
+        if not await self._slug_taken(base_slug, scope_conditions):
+            return base_slug
+        
+        for _ in range(5):
+            slug = f"{base_slug}-{secrets.token_hex(3)}"
+            if not await self._slug_taken(slug, scope_conditions):
+                return slug
+
+        return f"{base_slug}-{uuid.uuid4().hex[:8]}" #last line of defense (fallback lol)
+        
+    async def _slug_taken(self, slug: str, scope_conditions: tuple) -> bool:
+        result = await self.session.execute(
+            select(self.model)
+            .where(and_(self.model.slug == slug, *scope_conditions))
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
 
 
 
