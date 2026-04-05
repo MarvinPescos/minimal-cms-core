@@ -1,4 +1,3 @@
-from slugify import slugify
 from typing import List
 from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -98,23 +97,4 @@ class TenantScopeRepository(BaseRepository[ModelType]):
                 f"Failed to list {self.model_name}",
                 original_error=e
             )
-
-    async def generate_unique_slug(self, base_text: str, tenant_id: uuid.UUID | None = None) -> str:
-        base_slug = slugify(base_text)
-        slug = base_slug
-        counter = 1
-
-        while True:
-            existing = await self.get_one(
-                tenant_id=tenant_id, 
-                identifier=slug
-            )
-
-            if not existing: #if it not exist matik break then return ang slug
-                break
-            
-            slug = f"{base_slug}-{counter}"
-            counter +=1
-        
-        return slug
 
