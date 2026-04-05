@@ -25,108 +25,74 @@ class AlbumService:
         self.session = session
         self.repo = AlbumRepository(session)
 
-    # === Public services ===
-
-    async def get_all_public_album(self, user_id: uuid.UUID) -> List[Album]:
-        """
-        Retrieve all published albums for a tenant's public landing page.
-
-        Args:
-            user_id: UUID of the user (tenant) whose public albums to list.
-
-        Returns:
-            A list of Album ORM objects that are published. Includes loaded images.
-            Returns an empty list if no published albums exist.
-        """
-        log.info("album.public.fetch.all", user_id=user_id)
-        return await self.repo.get_public_albums(user_id=user_id)
-
-    async def get_public_album_by_slug(self, user_id: uuid.UUID, slug: str) -> Album:
-        """
-        Retrieve a single published album by its slug (public, no auth).
-
-        Args:
-            user_id: UUID of the user (tenant) who owns the album.
-            slug: SEO-friendly slug of the album.
-
-        Returns:
-            The Album ORM object with images loaded if found and published.
-
-        Raises:
-            NotFoundError: If no published album exists for this user with the given slug.
-        """
-        album = await self.repo.get_public_album_slug(user_id, slug)
-
-        if not album:
-            raise NotFoundError("Album not found")
-
-        log.info("album.public.get.slug", user_id=user_id, slug=slug)
-        return album
-
     # === Read Operation ===
 
-    async def get_user_albums(self, user_id: uuid.UUID) -> List[Album]:
+    async def get_tenant_albums(
+        self,
+        tenant_id: uuid.UUID, 
+        is_published: bool | None = None
+    ) -> List[Album]:
         """
-        Retrieve all albums belonging to a specific user.
+        List all albums for a given tenant.
 
         Args:
-            user_id: UUID of the user whose albums to retrieve.
+            tenant_id: Tenant to scope the query to.
+            is_published: Optional filter for publication status.
 
         Returns:
-            A list of AlbumResponse objects belonging to the user.
-            Returns an empty list if no albums exist.
+            List of `Album` records belonging to the tenant.
         """
-        log.info("album.fetch.all", user_id=user_id)
-        return await self.repo.get_all_album_with_images(user_id=user_id)
+        log.info("album.fetch.all", tenant_id=tenant_id)
+        return await self.repo.get_all_albums(tenant_id, is_published)
 
-    async def get_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> Album:
+    async def get_album(self, tenant_id: uuid.UUID, identifier: str | uuid.UUID) -> Album:
         """
-        Retrieve a single album by ID with ownership verification.
+        Fetch a single album by ID or slug within a tenant.
 
         Args:
-            user_id: UUID of the user requesting the album.
-            album_id: UUID of the album to retrieve.
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID or slug identifying the album.
 
         Returns:
-            The AlbumResponse object matching the provided album_id.
+            The matching `Album`.
 
         Raises:
-            NotFoundError: If the album does not exist or does not belong to the user.
+            NotFoundError: If the album does not exist in the tenant.
         """
-        album = await self.repo.get_album_with_images(user_id, album_id)
+        album = await self.repo.get_one(tenant_id=tenant_id, identifier=identifier)
 
         if not album:
             raise NotFoundError("Album not found")
 
-        log.info("album.get.album", user_id=user_id, album_id=album_id)
+        log.info("album.get.album", tenant_id=tenant_id, identifier=identifier)
+
         return album    
 
         
     # === Write Operation ===
 
-    async def create_album(self, user_id: uuid.UUID, data: AlbumCreate) -> AlbumResponse:
+    async def create_album(self, tenant_id: uuid.UUID, data: AlbumCreate) -> AlbumResponse:
         """
-        Create a new album for a user with auto-generated unique slug.
+        Create a new tenant-scoped album.
 
         Args:
-            user_id: UUID of the user creating the album.
-            data: AlbumCreate schema containing album title and details.
+            tenant_id: Tenant that owns the album.
+            data: Payload containing the album definition.
 
         Returns:
-            The newly created AlbumResponse object with generated slug.
+            The created `AlbumResponse`.
 
         Raises:
-            ConflictError: If the album violates database integrity constraints.
-            BaseAppException: If a database error occurs during creation.
+            ConflictError: If constraints (e.g., uniqueness) are violated.
+            BaseAppException: For unexpected database errors.
         """
-        log.info(f"User: {user_id} is adding album '{data.title}'")
         try:
-            slug = await self.repo.generate_unique_slug(data.title)
-            album = await self.repo.create(user_id=user_id, slug=slug, **data.model_dump())
+            slug = await self.repo.generate_unique_slug(data.title, Album.tenant_id == tenant_id)
+            album = await self.repo.create(tenant_id=tenant_id, slug=slug, **data.model_dump())
 
             log.info(
                 "album.create",
-                user_id=user_id, 
+                tenant_id=tenant_id, 
                 title=data.title
             )
             
@@ -136,13 +102,12 @@ class AlbumService:
             slug=album.slug,
             cover_url=album.cover_url,
             is_published=album.is_published,
-            images=[]  
         )
              
         except IntegrityConstraintError as e:
             log.warning(
                 "album.create.integrity_error",
-                user_id=str(user_id),
+                user_id=str(tenant_id),
                 album_title=data.title,
                 error=str(e)
             )
@@ -150,43 +115,41 @@ class AlbumService:
         except DatabaseError as e:
             log.error(
                 "album.database.error",
-                user_id=str(user_id),
+                user_id=str(tenant_id),
                 error=str(e),
             )
             raise BaseAppException("Failed to create album")
             
     async def update_album(
         self, 
-        user_id: uuid.UUID, 
-        album_id: uuid.UUID, 
+        tenant_id: uuid.UUID, 
+        identifier: str | uuid.UUID, 
         data: AlbumUpdate
     ) -> Album:
         """
-        Partially update an existing album with ownership verification.
+        Partially update an existing album.
 
         Args:
-            user_id: UUID of the user requesting the update.
-            album_id: UUID of the album to update.
-            data: AlbumUpdate schema containing fields to update.
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID or slug identifying the album.
+            data: Partial update payload.
 
         Returns:
-            The updated Album object with applied changes.
+            The updated `Album`.
 
         Raises:
-            NotFoundError: If the album does not exist or does not belong to the user.
-            ConflictError: If the update violates database integrity constraints.
-            BaseAppException: If a database error occurs during update.
+            NotFoundError: If the album does not exist.
+            ConflictError: If constraints are violated.
+            BaseAppException: For unexpected database errors.
         """
-        log.info(f"User: {user_id} is updating album '{data.title}'")
-
-        album = await self.get_album(user_id=user_id, album_id=album_id)
+        album = await self.get_album(tenant_id=tenant_id, identifier=identifier)
 
         try:
             updated_data = data.model_dump(exclude_unset=True)
             log.info(
                 "album.update",
-                user_id=user_id,
-                album_id=album_id,
+                tenant_id=tenant_id,
+                identifier=identifier,
                 updated_fields = list(updated_data.keys())
             )
             return await self.repo.update(album, **updated_data)
@@ -194,7 +157,7 @@ class AlbumService:
         except IntegrityConstraintError as e:
             log.warning(
                 "album.update.integrity_error",
-                user_id=str(user_id),
+                tenant_id=str(tenant_id),
                 album_title=data.title,
                 error=str(e)
             )
@@ -202,43 +165,39 @@ class AlbumService:
         except DatabaseError as e:
             log.error(
                 "album.database.error",
-                user_id=str(user_id),
+                tenant_id=str(tenant_id),
                 error=str(e),
             )
             raise BaseAppException("Failed to update album")
     
     # TODO Need softdelete!!
-    async def delete_album(self, user_id: uuid.UUID, album_id: uuid.UUID) -> None:
+    async def delete_album(self, tenant_id: uuid.UUID, identifier: str | uuid.UUID) -> None:
         """
-        Permanently delete an album after verifying ownership.
+        Permanently delete a tenant-scoped album.
 
         Args:
-            user_id: UUID of the user requesting the deletion.
-            album_id: UUID of the album to delete.
-
-        Returns:
-            None. The album is permanently removed from the database.
+            tenant_id: Tenant to scope the query to.
+            identifier: UUID or slug identifying the album.
 
         Raises:
-            NotFoundError: If the album does not exist or does not belong to the user.
-            BaseAppException: If a database error occurs during deletion.
+            NotFoundError: If the album does not exist.
+            BaseAppException: For unexpected database errors.
         """
-        album = await self.get_album(user_id=user_id, album_id=album_id)
-        log.info(f"User: {user_id} is deleting album '{album.title}'")
+        album = await self.get_album(tenant_id=tenant_id, identifier=identifier)
 
         try:
             log.info(
                 "album.deleted",
-                user_id=str(user_id),
-                album_id=str(album_id),
+                tenant_id=str(tenant_id),
+                identifier=str(identifier),
                 title=album.title,
             )
             await self.repo.delete(album)
         except DatabaseError as e:
             log.error(
                 "album.database.error",
-                user_id=str(user_id),
-                album_id=str(album_id),
+                tenant_id=str(tenant_id),
+                identifier=str(identifier),
                 error=str(e)
             )
             raise BaseAppException("Failed to delete album")
@@ -257,43 +216,41 @@ class ImageService:
 
     async def upload_images(
         self,
-        user_id: uuid.UUID,
-        album_id: uuid.UUID,
+        tenant_id: uuid.UUID,   
+        album_identifier: str,
         files: List[UploadFile]
     ) -> List[ImageResponse]:
         """
-        Upload multiple images to Supabase Storage and create database records.
+        Upload multiple images to storage and create database records.
 
         Args:
-            user_id: UUID of the authenticated user.
-            files: List of UploadFile objects from FastAPI.
-            metadata: List of ImageCreate schemas with caption and is_published.
+            tenant_id: Tenant owning the album.
+            album_identifier: UUID or slug of the target album.
+            files: List of uploaded files.
 
         Returns:
-            List of ImageResponse with full image details including URLs.
+            List of `ImageResponse` objects.
 
         Raises:
-            BadRequestError: If file count doesn't match metadata, or validation fails.
-            ConflictError: If database constraint is violated.
-            BaseAppException: For storage or database failures.
+            NotFoundError: If the album does not exist.
+            BaseAppException: If storage upload or database save fails.
         """
-
         log.info(
             "gallery.upload.started",
-            user_id=str(user_id),
+            tenant_id=str(tenant_id),
             file_count=len(files)
         )
 
-        album = await self.album_repo.get_by_user_and_id(user_id, album_id)
+        album = await self.album_repo.get_one(tenant_id=tenant_id, identifier=album_identifier)
         if not album:
-          raise NotFoundError("Album not found")
+            raise NotFoundError("Album not found")
 
         uploaded_images: List[ImageResponse] = []
 
         for i, file in enumerate(files):
             image_response = await self._process_single_image(
-                user_id,
-                album_id=album_id,
+                tenant_id=tenant_id,
+                album_id=album.id,
                 album_title=album.title,
                 file=file
             )
@@ -304,191 +261,128 @@ class ImageService:
 
         log.info(
             "gallery.upload.completed",
-            user_id=str(user_id),
+            tenant_id=str(tenant_id),
             success_count=len(uploaded_images)
         )
 
         return uploaded_images
 
-    async def _process_single_image(
-        self,
-        user_id: uuid.UUID,
-        album_id: uuid.UUID,
-        album_title: str, 
-        file: UploadFile,
-    ) -> ImageResponse:
-        """
-        Process a single image: validate, upload, extract dimensions, save to DB.
-
-        Args:
-            user_id: UUID of the authenticated user.
-            file: Single UploadFile object.
-            meta: ImageCreate schema with caption and is_published.
-
-        Returns:
-            ImageResponse with full image details.
-        """
-
-        # Validate first!
-        contents = await validate_image_file(file)
-        # Extract image dimensions
-        width, height = self._get_image_dimensions(contents)
-        # Generate unique slug
-        slug = await self.repo.generate_unique_slug(album_title, user_id)
-
-        # Upload to Supabase Storage
-        try:
-            image_url = await self.storage.upload_image(
-                file_bytes=contents,
-                user_id=user_id,
-                folder="Gallery" ,
-                file_name=f"{slug}.{file.content_type.split('/')[-1]}",
-                content_type=file.content_type
-            )
-        except Exception as e:
-            log.error(
-                "gallery.storage.upload_failed",
-                user_id=str(user_id),
-                filename=file.filename,
-                error=str(e)
-            )
-            raise BaseAppException(f"Failed to upload image to storage: {str(e)}")
-
-        # 6. Create database record
-        try:
-            db_image = await self.repo.create(
-                user_id=user_id,
-                album_id=album_id,
-                slug=slug,
-                width=width,
-                height=height,
-                image_url=image_url,
-            )
-
-            log.info(
-                "gallery.image.created",
-                user_id=str(user_id),
-                image_id=str(db_image.id),
-                slug=slug
-            )
-
-            return ImageResponse.model_validate(db_image)
-
-        except IntegrityConstraintError as e:
-            log.warning(
-                "gallery.create.integrity_error",
-                user_id=str(user_id),
-                album_title=album_title,
-                error=str(e)
-            )
-            raise ConflictError("Image creation violates database constraints")
-        except DatabaseError as e:
-            log.error(
-                "gallery.database.error",
-                user_id=str(user_id),
-                error=str(e)
-            )
-            raise BaseAppException("Failed to save image to database")
-
     # === Read Operations ===
 
-    async def get_user_images(
+    async def get_images_in_album(
         self,
-        user_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+        album_identifier: str,
         limit: int = 100,
         offset: int = 0,
     ) -> List[ImageResponse]:
         """
-        Get all images for a specific user with pagination.
+        List all images within a specific album for a tenant.
 
         Args:
-            user_id: UUID of the user.
-            limit: Maximum number of images to return.
-            offset: Number of images to skip.
+            tenant_id: Tenant to scope the query to.
+            album_identifier: UUID or slug of the album.
+            limit: Maximum number of records to return.
+            offset: Number of records to skip.
 
         Returns:
-            List of ImageResponse objects.
+            List of `ImageResponse` objects.
         """
-        images = await self.repo.get_all_by_user_id(user_id=user_id, limit=limit, offset=offset)
-
-        log.info(
-            "gallery.get.images",
-            user_id=user_id
+        images = await self.repo.get_by_album(
+            tenant_id=tenant_id,
+            album_identifier=album_identifier,
+            limit=limit,
+            offset=offset
         )
+        log.info("gallery.get.images", tenant_id=tenant_id)
+        return [ImageResponse.model_validate(img) for img in images]
 
-        return [
-            ImageResponse.model_validate(img)
-            for img in images
-        ]
 
-    async def get_image(self, user_id:uuid.UUID, image_id: uuid.UUID ) -> Image:
-        """Retrieve single image"""
 
-        image = await self.repo.get_by_user_and_id(user_id, image_id)
+    async def get_public_images(
+        self,
+        tenant_id: uuid.UUID,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[ImageResponse]:
+        """
+        List all images from published albums for public viewing.
 
+        Args:
+            tenant_id: Tenant to scope the query to.
+            limit: Maximum number of records to return.
+            offset: Number of records to skip.
+
+        Returns:
+            List of `ImageResponse` objects.
+        """
+        images = await self.repo.get_public_images(
+            tenant_id=tenant_id,
+            limit=limit,
+            offset=offset
+        )
+        log.info("gallery.public.get.images", tenant_id=tenant_id)
+        return [ImageResponse.model_validate(img) for img in images]
+
+
+    # Helper for delete function. Might add it as endpoint.
+    async def get_image(self, tenant_id: uuid.UUID, image_id: uuid.UUID) -> Image:
+        """
+        Fetch a single image by ID within a tenant.
+
+        Args:
+            tenant_id: Tenant to scope the query to.
+            image_id: UUID of the image.
+
+        Returns:
+            The matching `Image`.
+
+        Raises:
+            NotFoundError: If the image does not exist.
+        """
+        image = await self.repo.get_scoped_by_id(tenant_id=tenant_id, image_id=image_id)
         if not image:
             raise NotFoundError("Image not found")
-
-        log.info(
-            "gallery.get.single.image",
-            user_id=user_id
-        )
-    
         return image
 
     # === Write Operations ===
 
-    async def delete_image(self, user_id: uuid.UUID, image_id: uuid.UUID) -> None:
-        """Delete single image"""
+    async def delete_image(self, tenant_id: uuid.UUID, image_id: uuid.UUID) -> None:
+        """
+        Permanently delete an image from storage and database.
 
-        image = await self.get_image(user_id, image_id)
-        log.info(f"User: {user_id} is deleting image '{image_id}'")
+        Args:
+            tenant_id: Tenant owning the image.
+            image_id: UUID of the image to delete.
+
+        Raises:
+            NotFoundError: If the image does not exist.
+            BaseAppException: If storage deletion or database operation fails.
+        """
+        image = await self.get_image(tenant_id, image_id)
 
         try:
-            log.info(
-                "image.deleted",
-                user_id=str(user_id),
-                event_id=str(image_id),
-            )
-
+            log.info("image.deleted", tenant_id=str(tenant_id), image_id=str(image_id))
 
             path = urlparse(image.image_url).path
             file_name_with_extension = path.rsplit("/", 1)[-1]
 
             await self.storage.delete_image(
-                    folder="Gallery",
-                    file_name=file_name_with_extension,
-                    user_id=user_id
-                )
+                folder="Gallery",
+                file_name=file_name_with_extension,
+                tenant_id=tenant_id
+            )
             await self.repo.delete(image)
         except DatabaseError as e:
             log.error(
                 "image.database.error",
-                user_id=str(user_id),
+                tenant_id=str(tenant_id),
                 image_id=str(image_id),
                 error=str(e)
             )
             raise BaseAppException("Failed to delete image")
 
-    
-    # === Public Access (no auth required) ===
-
-    async def get_public_images(self, user_id: uuid.UUID, limit: int = 100, offset: int = 0):
-        """Get all images from published albums for landing page"""
-        log.info("gallery.public.fetch.all", user_id=user_id)
-        images = await self.repo.get_public_images(user_id, limit, offset)
-        return [ImageResponse.model_validate(img) for img in images]
-
-    async def get_public_image_by_slug(self, user_id: uuid.UUID, slug: str):
-        """Get a single image by slug if its album is published"""
-        image = await self.repo.get_public_image_by_slug(user_id, slug)
-        if not image:
-            raise NotFoundError("Image not found")
-        log.info("gallery.public.fetch", user_id=user_id, slug=slug)
-        return ImageResponse.model_validate(image)
-
     # === Helpers ===
-
 
     def _get_image_dimensions(self, file_bytes: bytes) -> tuple[int, int]:
         try:
@@ -497,4 +391,61 @@ class ImageService:
         except (IOError, OSError) as e:
             log.error("gallery.image.dimensions_failed", error=str(e))
             raise BadRequestError("Could not process image. File may be corrupted.")
+
+    async def _process_single_image(
+        self,
+        tenant_id: uuid.UUID,
+        album_id: uuid.UUID,
+        album_title: str,
+        file: UploadFile,
+    ) -> ImageResponse:
+        """Validate, upload, and save a single image."""
+        contents = await validate_image_file(file)
+        width, height = self._get_image_dimensions(contents)
+        slug = await self.repo.generate_unique_slug(album_title, Image.album_id == album_id)
+
+        try:
+            image_url = await self.storage.upload_image(
+                file_bytes=contents,
+                tenant_id=tenant_id,
+                folder="Gallery",
+                file_name=f"{slug}.{file.content_type.split('/')[-1]}",
+                content_type=file.content_type
+            )
+        except Exception as e:
+            log.error(
+                "gallery.storage.upload_failed",
+                tenant_id=str(tenant_id),
+                filename=file.filename,
+                error=str(e)
+            )
+            raise BaseAppException(f"Failed to upload image to storage: {str(e)}")
+
+        try:
+            db_image = await self.repo.create(
+                album_id=album_id,
+                slug=slug,
+                width=width,
+                height=height,
+                image_url=image_url,
+            )
+            log.info(
+                "gallery.image.created",
+                tenant_id=str(tenant_id),
+                image_id=str(db_image.id),
+                slug=slug
+            )
+            return ImageResponse.model_validate(db_image)
+
+        except IntegrityConstraintError as e:
+            log.warning(
+                "gallery.create.integrity_error",
+                tenant_id=str(tenant_id),
+                album_title=album_title,
+                error=str(e)
+            )
+            raise ConflictError("Image creation violates database constraints")
+        except DatabaseError as e:
+            log.error("gallery.database.error", tenant_id=str(tenant_id), error=str(e))
+            raise BaseAppException("Failed to save image to database")
 
