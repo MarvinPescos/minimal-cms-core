@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status, Request
-from typing import List, Required
+from typing import List
 import uuid
 
 from app.infrastructure.security import require_admin, AuthenticatedUser, require_auth
@@ -33,7 +33,19 @@ async def list_all_tenants(
     current_user: AuthenticatedUser = Depends(require_admin),
     service: TenantService = Depends(get_tenant_service)
 ):
-    """Get all tenants"""
+    """
+    List all tenants in the system.
+
+    Args:
+        request: The fastAPI request object.
+        limit: Maximum number of records to return.
+        offset: Number of records to skip.
+        current_user: The authenticated admin user.
+        service: The tenant management service.
+
+    Returns:
+        List of `TenantResponse` objects.
+    """
     return await service.get_all_tenants()
 
 @router_tenant.get(
@@ -49,7 +61,21 @@ async def get_tenant(
     current_user: AuthenticatedUser = Depends(require_admin),
     service: TenantService = Depends(get_tenant_service)
 ):
-    """Get an tenant"""
+    """
+    Fetch a single tenant by UUID or slug.
+
+    Args:
+        request: The fastAPI request object.
+        identifier: UUID or slug identifying the tenant.
+        current_user: The authenticated admin user.
+        service: The tenant management service.
+
+    Returns:
+        The matching `TenantResponse`.
+
+    Raises:
+        NotFoundError: If the tenant does not exist.
+    """
     return await service.get_tenant(identifier=identifier)
 
 @router_tenant.post(
@@ -65,7 +91,21 @@ async def create_tenant(
     current_user: AuthenticatedUser = Depends(require_admin),
     service: TenantService = Depends(get_tenant_service)
 ):
-    """Create a tenant"""
+    """
+    Create a new tenant.
+
+    Args:
+        request: The fastAPI request object.
+        data: Payload containing the tenant definition.
+        current_user: The authenticated admin user.
+        service: The tenant management service.
+
+    Returns:
+        The created `TenantResponse`.
+
+    Raises:
+        ConflictError: If the tenant name/slug violates uniqueness constraints.
+    """
     return await service.create_tenant(data=data)
 
 
@@ -83,7 +123,23 @@ async def update_tenant(
     current_user: AuthenticatedUser = Depends(require_admin),
     service: TenantService = Depends(get_tenant_service)
 ):
-    """Partially update an existing tenant"""
+    """
+    Partially update an existing tenant.
+
+    Args:
+        request: The fastAPI request object.
+        identifier: UUID or slug identifying the tenant to update.
+        data: Partial update payload.
+        current_user: The authenticated admin user.
+        service: The tenant management service.
+
+    Returns:
+        The updated `TenantResponse`.
+
+    Raises:
+        NotFoundError: If the tenant does not exist.
+        ConflictError: If updates violate constraints.
+    """
     return await service.update_tenant(identifier= identifier, data=data)    
 
 # <===-=-=-=-=-=-=-=-=-=-=-======-=-=-=-=-=-=-=-=-=-=-=-===>
@@ -103,7 +159,20 @@ async def list_all_tenant_members(
     current_user: AuthenticatedUser = Depends(require_auth),
     service: TenantMemberService = Depends(get_tenant_member_service)
 ):
-    """Get all tenant member"""
+    """
+    List all members belonging to a specific tenant.
+
+    Args:
+        request: The fastAPI request object.
+        tenant_id: UUID of the tenant to scope the query to.
+        limit: Maximum number of records to return.
+        offset: Number of records to skip.
+        current_user: The authenticated user making the request.
+        service: The tenant member management service.
+
+    Returns:
+        List of `StaffAccountResponse` objects.
+    """
     return await service.get_all_tenant_members(tenant_id)
 
 @router_tenant_member.get(
@@ -120,7 +189,22 @@ async def get_tenant_member(
     current_user: AuthenticatedUser = Depends(require_auth),
     service: TenantMemberService = Depends(get_tenant_member_service)
 ):
-    """Get a tenant member"""
+    """
+    Fetch a single tenant member by ID or username.
+
+    Args:
+        request: The fastAPI request object.
+        tenant_id: UUID of the tenant to scope the query to.
+        identifier: UUID of the member or their username.
+        current_user: The authenticated user making the request.
+        service: The tenant member management service.
+
+    Returns:
+        The matching `StaffAccountResponse`.
+
+    Raises:
+        NotFoundError: If the member does not exist in the tenant.
+    """
     return await service.get_tenant_member(tenant_id, identifier)
 
 @router_tenant_member.post(
@@ -137,7 +221,22 @@ async def create_tenant_member(
     current_user: AuthenticatedUser = Depends(require_auth),
     service: TenantMemberService = Depends(get_tenant_member_service)
 ):
-    """Create a tenant"""
+    """
+    Create a new staff account for a tenant.
+
+    Args:
+        request: The fastAPI request object.
+        tenant_id: UUID of the tenant owning the account.
+        data: Payload containing account details.
+        current_user: The authenticated user making the request.
+        service: The tenant member management service.
+
+    Returns:
+        The created `StaffAccountResponse`.
+
+    Raises:
+        ConflictError: If the username is already taken.
+    """
     return await service.create_account(tenant_id, data)
 
 @router_tenant_member.patch(
@@ -155,7 +254,24 @@ async def update_tenant_member(
     current_user: AuthenticatedUser = Depends(require_auth),
     service: TenantMemberService = Depends(get_tenant_member_service)
 ):
-    """Update a tenant"""
+    """
+    Update a tenant member's account details or status.
+
+    Args:
+        request: The fastAPI request object.
+        tenant_id: UUID of the tenant to scope the query to.
+        tenant_member_id: UUID of the member to update.
+        data: Partial update payload.
+        current_user: The authenticated user making the request.
+        service: The tenant member management service.
+
+    Returns:
+        The updated `StaffAccountResponse`.
+
+    Raises:
+        NotFoundError: If the member does not exist.
+        ConflictError: If updates violate constraints.
+    """
     return await service.update_account(tenant_id, tenant_member_id, data)
 
 @router_tenant_member.delete(
@@ -171,5 +287,17 @@ async def delete_tenant_member(
     current_user: AuthenticatedUser =  Depends(require_auth),
     service: TenantMemberService = Depends(get_tenant_member_service)
 ):
-    """Delete a tenant"""
+    """
+    Permanently delete a tenant member account.
+
+    Args:
+        request: The fastAPI request object.
+        tenant_id: UUID of the tenant to scope the query to.
+        tenant_member_id: UUID of the member to delete.
+        current_user: The authenticated user making the request.
+        service: The tenant member management service.
+
+    Raises:
+        NotFoundError: If the member does not exist.
+    """
     return await service.delete_account(tenant_id, tenant_member_id)
