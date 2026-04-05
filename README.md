@@ -1,23 +1,57 @@
 ## Why This Exists
 
-Built this as a **free/low-cost CMS API for local businesses** in your area. 
+A **minimal CMS API for local businesses** — built as a free/low-cost solution for shops, churches, and cafes to manage their content without paying for enterprise tools.
 
-A **minimal CMS API for local businesses** in your area. Built to provide zero to minimal cost solutions for shops/churches/cafes to manage contents system.
+Target: ~10–20 local clients. Not built to scale to SaaS levels, and that's intentional.
 
-### **Tech Stack (All Free Tier):**
-- Backend: Python (FastAPI)
-- Supabase: Auth, PostgreSQL, Storage (Free Tier / Paid)
-- Upstash: Redis (Free Tier / Paid)
-- Heroku: Hosting (GitHub Student Pack)
+---
 
-### **Design Decision: Table-Level Multi-Tenancy**
-- Target: ~10-20 local clients max
-- Complete data isolation per client
-- Trade-off: Doesn't scale to SaaS levels (and that's fine)
+## Tech Stack (All Free Tier)
+
+| Layer | Tool |
+|---|---|
+| Backend | Python 3.12, FastAPI (async) |
+| Auth | Supabase Auth |
+| Database | PostgreSQL via Supabase |
+| File Storage | Supabase Storage |
+| Cache / Rate Limiting | Upstash Redis |
+| Hosting | Heroku  |
+| Migrations | Alembic |
+
+---
+
+## Architecture
+
+Layered architecture: **Router → Service → Repository → Database**
+
+- `BaseRepository[T]` — generic CRUD, slug generation
+- `TenantScopeRepository[T]` — all queries scoped to `tenant_id`
+- `PublishableMixin` — optional `is_published` filtering
+- `SoftDeleteMixin` — optional soft delete support
+- Custom exception hierarchy maps cleanly to HTTP status codes
+- Structured logging throughout (`structlog`)
+
+### Multi-Tenancy Design
+Shared schema, row-level isolation. Every tenant-scoped table carries a `tenant_id` foreign key. All queries are filtered at the repository layer — services cannot accidentally bypass tenant scoping.
+
+Staff accounts use synthetic emails: `{username}@{tenant.slug}.keta.com`
+
+---
+
+## Features
+
+| Feature | Description |
+|---|---|
+| **Auth** | Sign up, sign in via Supabase. JWT verification on protected routes. |
+| **Tenants** | Create and manage client tenants. Developer-managed setup. |
+| **Tenant Members** | Staff accounts scoped to a tenant with role support (owner/member). |
+| **Gallery** | Albums with cover images. Bulk image upload to Supabase Storage. |
+| **Content Types** | Define custom content schemas with JSON Schema validation. |
+| **Content Entries** | Create and manage entries validated against their content type schema. |
 
 ### Use Cases
 - Church event calendars + photo galleries
-- Restaurant menus (add feature if needed only gallery and event are provided.)
+- Restaurant menus
 - Small business portfolios
 
 ---
@@ -25,36 +59,49 @@ A **minimal CMS API for local businesses** in your area. Built to provide zero t
 ## Getting Started
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.12+
 - Docker & Docker Compose
-- Supabase account (free tier)
-- Upstash Redis account (free tier, for production)
+- Supabase project (free tier)
+- Upstash Redis account (free tier)
 
 ### Setup
 
 ```bash
-# Clone the repo
 git clone https://github.com/MarvinPescos/minimal-cms-core.git
-cd minimal-cms/backend
+cd minimal-cms-core/backend
 
-# Copy environment template
+# Copy environment template and fill in credentials
 cp .env.example .env
-# Edit .env with your Supabase/Redis credentials
 
 # Run with Docker
 docker-compose up -d
 
 # Run migrations
 alembic upgrade head
+
+# Start the server
+uvicorn app.main:app --reload
 ```
+
+### Environment Variables
+
+See `.env.example` for the full list. Required:
+- `DB_URL` — PostgreSQL async connection string
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`
+- `REDIS_URL` — Upstash Redis URL (`rediss://...`)
 
 ---
 
 ## Tenant Setup
-This is developer-managed. To add a client:
-1. Run migrations for their tables
-2. Create admin via `/auth/signup`
+
+Developer-managed. To onboard a new client:
+
+1. `POST /tenants` — create the tenant (slug auto-generated from name)
+2. `POST /tenants/{tenant_id}/members` — create their staff account
 3. Hand off credentials
 
 ---
 
+## API Docs
+
+Available at `/docs` (Swagger UI) when the server is running.
