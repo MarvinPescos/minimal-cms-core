@@ -94,11 +94,13 @@ See `.env.example` for the full list. Required:
 
 ## Tenant Setup
 
-Developer-managed. To onboard a new client:
-
+**Developer (admin):**
 1. `POST /tenants` — create the tenant (slug auto-generated from name)
-2. `POST /tenants/{tenant_id}/members` — create their staff account
-3. Hand off credentials
+2. `POST /tenant/members` — create the owner account for that tenant
+3. Hand off owner credentials to the client
+
+**Owner (once authenticated):**
+- `POST /tenant/members` — create and manage their own staff accounts
 
 ---
 
