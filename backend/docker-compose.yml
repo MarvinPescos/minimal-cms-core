@@ -1,8 +1,8 @@
 services:
   backend:
     build: .
-    image: minimal-cms:latest
-    container_name: minimal-cms-backend
+    image: cms:latest
+    container_name: cms-backend
     ports:
       - "8001:8000"
     volumes:
