@@ -14,7 +14,7 @@ class SupabaseStorageClient:
     async def upload_image(
         self,
         file_bytes: bytes,
-        user_id: uuid.UUID,
+        tenant_id: uuid.UUID,
         folder: str ,
         file_name : str | None = None,
         content_type: str = "image/jpeg",
@@ -35,7 +35,7 @@ class SupabaseStorageClient:
             extension = content_type.split("/")[-1]
             file_name = f"{uuid.uuid4()}.{extension}"
         
-        file_path = f"{user_id}/{folder}/{file_name}"
+        file_path = f"{tenant_id}/{folder}/{file_name}"
 
         client = self._get_client()
         client.storage.from_(self.bucket_name).upload(
@@ -48,12 +48,12 @@ class SupabaseStorageClient:
         
         return url_response
 
-    async def delete_image(self, folder: str, file_name: str,user_id: uuid.UUID) -> bool:
+    async def delete_image(self, folder: str, file_name: str, tenant_id: uuid.UUID) -> bool:
         """Delete an image from storage"""
         try:
             client = self._get_client()
 
-            file_path = f"{user_id}/{folder}/{file_name}"
+            file_path = f"{tenant_id}/{folder}/{file_name}"
 
             client.storage.from_(self.bucket_name).remove(file_path)
             return True
