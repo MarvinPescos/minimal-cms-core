@@ -24,24 +24,6 @@ class TenantRepository(BaseRepository[Tenant]):
         )
         return result.scalar_one_or_none()
 
-    async def generate_unique_slug(self, base_text: str, tenant_id: uuid.UUID | None = None) -> str:
-        base_slug = slugify(base_text)
-        slug = base_slug
-        counter = 1
-
-        while True:
-            existing = await self.get_by_identifier(identifier=slug)
-
-            if not existing: #if it not exist matik break then return ang slug
-                break
-            
-            slug = f"{base_slug}-{counter}"
-            counter +=1
-        
-        return slug
-    
-    # === Custom Methods ===
-
 class TenantMembersRepository(TenantScopeRepository[TenantMembers]):
     """Repository pattern for TenantMembers"""
 
