@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, status, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database import get_db
 from app.infrastructure.cache import limiter, RateLimits
@@ -50,7 +49,20 @@ async def sign_up(
     data: SignUpRequest,
     service: AuthService = Depends(get_auth_service)
 ) -> SignUpResponse:
-    """Register a new user with Supabase and sync to local database."""
+    """
+    Register a new user with Supabase and sync to local database.
+
+    Args:
+        request: The fastAPI request object.
+        data: Payload containing user registration details.
+        service: The authentication service.
+
+    Returns:
+        The created user's identity and confirmation status.
+
+    Raises:
+        BadRequestError: If the user already exists or sign-up fails.
+    """
     result = await service.sign_up(data)
     
     return SignUpResponse(
@@ -92,10 +104,23 @@ async def sign_up(
 async def sign_in(
     request: Request,
     data: SignInRequest,
-    session: AsyncSession = Depends(get_db),
+    # session: AsyncSession = Depends(get_db), #not been used? comment lang balikan ra tika     
     service: AuthService = Depends(get_auth_service)
 ) -> SignInResponse:
-    """Authenticate user with Supabase and return tokens."""
+    """
+    Authenticate a user with Supabase and return session tokens.
+
+    Args:
+        request: The fastAPI request object.
+        data: Payload containing credentials.
+        service: The authentication service.
+
+    Returns:
+        A `SignInResponse` containing access and refresh tokens.
+
+    Raises:
+        UnauthorizedError: If credentials are invalid or email is not verified.
+    """
     result = await service.sign_in(data)
     
     return SignInResponse(
@@ -136,6 +161,19 @@ async def resend_verification(
     data: ResendVerificationRequest,
     service: AuthService = Depends(get_auth_service)
 ) -> MessageResponse:
-    """Resend verification email to unverified user."""
+    """
+    Resend the verification email to an unverified user.
+
+    Args:
+        request: The fastAPI request object.
+        data: Payload containing the target email.
+        service: The authentication service.
+
+    Returns:
+        A simple message response.
+
+    Raises:
+        BadRequestError: If the email cannot be sent.
+    """
     result = service.resend_verification_email(data.email)
     return MessageResponse(message=result["message"])
