@@ -259,7 +259,7 @@ class ContentEntryService:
             raise BadRequestError(f" Does not match schema: {e.message}")
 
         try: 
-            slug = await self.repo.generate_unique_slug(data.title, tenant_id)
+            slug = await self.repo.generate_unique_slug(data.title, ContentEntry.tenant_id == tenant_id)
 
             entry = await self.repo.create(
                 tenant_id=tenant_id,
