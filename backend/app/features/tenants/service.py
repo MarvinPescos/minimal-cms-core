@@ -25,12 +25,28 @@ class TenantService:
 
     # Admin Operations
     async def get_all_tenants(self) -> List[TenantResponse]:
-        """"""
+        """
+        List all tenants in the system.
+
+        Returns:
+            List of `TenantResponse` objects.
+        """
         log.info("tenant.get.all", admin="admin.routes")
         return await self.repo.get_all()
 
     async def get_tenant(self, identifier: uuid.UUID | str) -> TenantResponse:
-        """"""
+        """
+        Fetch a single tenant by UUID or slug.
+
+        Args:
+            identifier: UUID or slug identifying the tenant.
+
+        Returns:
+            The matching `TenantResponse`.
+
+        Raises:
+            NotFoundError: If the tenant does not exist.
+        """
         log.info("tenant.get", admin="admin.routes")
 
         tenant = await self.repo.get_by_identifier(identifier)
@@ -43,7 +59,19 @@ class TenantService:
     # === Write Operation ===
 
     async def create_tenant(self, data: TenantCreate) -> Tenant:
-        """Create"""
+        """
+        Create a new tenant.
+
+        Args:
+            data: Payload containing the tenant definition.
+
+        Returns:
+            The created `Tenant` record.
+
+        Raises:
+            ConflictError: If the tenant name/slug violates uniqueness constraints.
+            BaseAppException: For unexpected database errors.
+        """
         log.info("tenant.creating", admin="admin.routes")
 
         try:
@@ -75,7 +103,21 @@ class TenantService:
     
     # Would do update, and disable (No delete, We ain't deleting tenants ma boi)
     async def update_tenant(self, identifier: uuid.UUID | str, data: TenantUpdate) -> Tenant:
-        """ """
+        """
+        Update an existing tenant's configuration.
+
+        Args:
+            identifier: UUID or slug identifying the tenant.
+            data: Partial update payload.
+
+        Returns:
+            The updated `Tenant` record.
+
+        Raises:
+            NotFoundError: If the tenant does not exist.
+            ConflictError: If updates violate constraints.
+            BaseAppException: For unexpected database errors.
+        """
         log.info("tenant.updating", admin="admin.routes")
 
         tenant = await self.get_tenant(identifier)
@@ -114,13 +156,33 @@ class TenantMemberService:
         self.supabase = get_supabase_admin()
     
     async def get_all_tenant_members(self, tenant_id: uuid.UUID) -> List[StaffAccountResponse]:
-        """"""
+        """
+        List all members belonging to a specific tenant.
+
+        Args:
+            tenant_id: UUID of the tenant.
+
+        Returns:
+            List of `StaffAccountResponse` objects.
+        """
         log.info("tenant.member.get.all", tenant_id=tenant_id)
         members = await self.repo.get_many(tenant_id=tenant_id)
         return [self._to_staff_response(m) for m in members]
 
     async def get_tenant_member(self, tenant_id: uuid.UUID, identifier: str | uuid.UUID) -> TenantMembers:
-        """"""
+        """
+        Fetch a single tenant member by ID or username.
+
+        Args:
+            tenant_id: UUID of the tenant.
+            identifier: UUID of the member or their username.
+
+        Returns:
+            The matching `TenantMembers` record.
+
+        Raises:
+            NotFoundError: If the member does not exist in the tenant.
+        """
         member = await self.repo.get_one(tenant_id=tenant_id, identifier=identifier) 
         
         if not member:
@@ -136,6 +198,21 @@ class TenantMemberService:
     
     # Tenant based account creation (These accounts are solely for this system)
     async def create_account(self, tenant_id: uuid.UUID, data: StaffAccountCreate):
+        """
+        Create a new staff account for a tenant, including Supabase auth.
+
+        Args:
+            tenant_id: UUID of the tenant owning the account.
+            data: Payload containing account details (username, password).
+
+        Returns:
+            The created `StaffAccountResponse`.
+
+        Raises:
+            ConflictError: If the username is already taken.
+            BadRequestError: If Supabase user creation fails.
+            BaseAppException: If local database sync fails.
+        """
         try:
             email, slug = await self._make_email(tenant_id, data.username)
 
@@ -186,7 +263,22 @@ class TenantMemberService:
             raise BaseAppException("Account created but failed to sync local permissions.")
         
     async def update_account(self, tenant_id: uuid.UUID, tenant_member_id: uuid.UUID, data: StaffAccountUpdate):
-        """"""
+        """
+        Update a tenant member's account details or status.
+
+        Args:
+            tenant_id: UUID of the tenant.
+            tenant_member_id: UUID of the member to update.
+            data: Partial update payload.
+
+        Returns:
+            The updated `TenantMembers` record.
+
+        Raises:
+            NotFoundError: If the member does not exist.
+            ConflictError: If updates violate constraints.
+            BaseAppException: For unexpected database errors.
+        """
 
         member = await self.get_tenant_member(tenant_id, tenant_member_id)
         try:
@@ -214,7 +306,17 @@ class TenantMemberService:
 
     # Only if owner finds member to cluttered or daghan na kaayo haha
     async def delete_account(self, tenant_id: uuid.UUID, tenant_member_id: uuid.UUID) -> None:
-        """"""
+        """
+        Permanently delete a tenant member account.
+
+        Args:
+            tenant_id: UUID of the tenant.
+            tenant_member_id: UUID of the member to delete.
+
+        Raises:
+            NotFoundError: If the member does not exist.
+            BaseAppException: For unexpected database errors.
+        """
         member = await self.get_tenant_member(tenant_id, tenant_member_id)
         
         try:
@@ -234,7 +336,19 @@ class TenantMemberService:
 
     # return email and slug (I need slug in creation of member accounts :>)
     async def _make_email(self, tenant_id: uuid.UUID, username: str) -> tuple[str, str]:
-        """Make an email credentials"""
+        """
+        Generate a unique keta.com email for a tenant member based on their username.
+
+        Args:
+            tenant_id: UUID of the tenant.
+            username: The desired username.
+
+        Returns:
+            A tuple of (email_string, tenant_slug).
+
+        Raises:
+            NotFoundError: If the tenant does not exist.
+        """
 
         tenant = await self.tenant_repo.get_by_id(tenant_id)
 
@@ -246,6 +360,15 @@ class TenantMemberService:
         return email, tenant.slug
     
     def _to_staff_response(self, member: TenantMembers) -> StaffAccountResponse:
+        """
+        Convert a TenantMembers record to a StaffAccountResponse schema.
+
+        Args:
+            member: The `TenantMembers` record to convert.
+
+        Returns:
+            A populated `StaffAccountResponse` object.
+        """
         return StaffAccountResponse(
             id=member.id,
             username=member.user.username,
