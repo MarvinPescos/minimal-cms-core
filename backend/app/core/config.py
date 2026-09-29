@@ -1,10 +1,11 @@
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator
-from typing import List
 import re
+from typing import List
+
+from pydantic import Field, validator
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
-
     # Database configuration
     DB_USER: str = Field(..., description="Database Username")
     DB_PASS: str = Field(..., min_length=1, description="Database password")
@@ -16,9 +17,15 @@ class Settings(BaseSettings):
 
     # Session pool
     DB_POOL_SIZE: int = Field(default=5, description="Connection pool size")
-    DB_MAX_OVERFLOW: int = Field(default=0, description="Max overflow connections beyond pool_size")
-    DB_POOL_PRE_PING: bool = Field(default=False, description="Verify connections before checkout")
-    DB_POOL_RECYCLE: int = Field(default=-1, description="Recycle connections after N seconds (-1 = never)")
+    DB_MAX_OVERFLOW: int = Field(
+        default=0, description="Max overflow connections beyond pool_size"
+    )
+    DB_POOL_PRE_PING: bool = Field(
+        default=False, description="Verify connections before checkout"
+    )
+    DB_POOL_RECYCLE: int = Field(
+        default=-1, description="Recycle connections after N seconds (-1 = never)"
+    )
     DB_ECHO: bool = Field(default=False, description="Echo SQL statements to log")
 
     ENVIRONMENT: str = Field(..., description="development or production")
@@ -26,22 +33,28 @@ class Settings(BaseSettings):
     # CORS Configuration
     CORS_ORIGINS: List[str] = Field(
         default=["*"],
-        description="List of allowed CORS origins. Use ['*'] for all or specify domains."
+        description="List of allowed CORS origins. Use ['*'] for all or specify domains.",
     )
 
     #  Redis Configuration (supports Upstash rediss:// URLs with auth)
-    REDIS_URL: str = Field(..., description="Redis connection URL (e.g., rediss://default:token@host:port)")
+    REDIS_URL: str = Field(
+        ..., description="Redis connection URL (e.g., rediss://default:token@host:port)"
+    )
 
     SUPABASE_URL: str = Field(..., description="Supabase project URL")
-    SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key") 
-    SUPABASE_SERVICE_ROLE_KEY: str = Field(..., description="Supabase role key for admin operations")
-    SUPABASE_JWT_SECRET: str = Field(..., description="Supabase JWT secret for token verification")
+    SUPABASE_ANON_KEY: str = Field(..., description="Supabase anonymous key")
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(
+        ..., description="Supabase role key for admin operations"
+    )
+    SUPABASE_JWT_SECRET: str = Field(
+        ..., description="Supabase JWT secret for token verification"
+    )
 
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
-        extra = "ignore" #Ignore muna di paman need
+        extra = "ignore"  # Ignore muna di paman need
+
 
 settings = Settings()
-
