@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     DB_URL: str = Field(..., description="Database URL")
     TEST_DB_URL: str = Field(..., description="Database URL for testing")
 
+    # Session pool
+    DB_POOL_SIZE: int = Field(default=5, description="Connection pool size")
+    DB_MAX_OVERFLOW: int = Field(default=0, description="Max overflow connections beyond pool_size")
+    DB_POOL_PRE_PING: bool = Field(default=False, description="Verify connections before checkout")
+    DB_POOL_RECYCLE: int = Field(default=-1, description="Recycle connections after N seconds (-1 = never)")
+    DB_ECHO: bool = Field(default=False, description="Echo SQL statements to log")
+
     ENVIRONMENT: str = Field(..., description="development or production")
 
     # CORS Configuration
