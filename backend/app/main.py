@@ -1,26 +1,24 @@
 from fastapi import FastAPI, Request
-from slowapi.errors import RateLimitExceeded
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.shared.errors.exceptions import BaseAppException
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+
 from app.core import settings
-
-
-from app.infrastructure.cache import limiter, rate_limit_exceeded_handler
-from app.features.auth import router as auth_router
-# from app.features.events import router as event_router
-from app.features.gallery import router_image as image_router
-from app.features.gallery import router_album as album_router
-from app.features.tenants import (
-    router_tenant as tenant_router,
-    router_tenant_member as tenant_member_router
+from app.features.accounts import router as auth_router
+from app.features.content import (
+    router_content_entry as content_entry_router,
 )
 from app.features.content import (
     router_content_type as content_type_router,
-    router_content_entry as content_entry_router,
 )
+from app.features.gallery import router_album as album_router
 
-
+# from app.features.events import router as event_router
+from app.features.gallery import router_image as image_router
+from app.features.tenants import router_tenant as tenant_router
+from app.features.tenants import router_tenant_member as tenant_member_router
+from app.infrastructure.cache import limiter, rate_limit_exceeded_handler
+from app.shared.errors.exceptions import BaseAppException
 
 app = FastAPI()
 
@@ -36,14 +34,13 @@ app.add_middleware(
 
 # Attach rate limiter to app state
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
 
 @app.exception_handler(BaseAppException)
 async def app_exception_handler(request: Request, exc: BaseAppException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content=exc.to_dict()
-    )
+    return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
+
 
 app.include_router(auth_router)
 # app.include_router(event_router)
@@ -53,6 +50,3 @@ app.include_router(tenant_router)
 app.include_router(tenant_member_router)
 app.include_router(content_type_router)
 app.include_router(content_entry_router)
-
-
-
