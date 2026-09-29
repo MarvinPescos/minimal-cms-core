@@ -30,24 +30,3 @@ class ResendVerificationRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str = Field(..., description="Response message")
-
-class UserProfileResponse(BaseModel):
-    user_id: str = Field(..., description="Unique identifier for the user")
-    email: str = Field(..., description="User's email address")
-    username: ValidatedUsername = Field(..., description="User's display name")
-    is_verified: bool = Field(..., description="Whether the user's email is verified")
-    metadata: dict = Field(default_factory=dict, description="Additional user metadata")
-
-    class Config:
-        from_attributes = True
-
-    @classmethod
-    def from_user(cls, user):
-        """Convert User model to response schema."""
-        return cls(
-            user_id=str(user.id),
-            email=user.email,
-            username=user.username,
-            is_verified=user.is_email_verified,
-            metadata=user.user_metadata or {}
-        )

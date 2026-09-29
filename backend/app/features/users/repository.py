@@ -6,7 +6,7 @@ from app.infrastructure.database import TenantScopeRepository
 from app.infrastructure.observability import log
 from app.features.users.models import User
 
-
+# TODO Switch to based or make a custom repo for it
 class UserRepository(TenantScopeRepository[User]):
     """Repository pattern for user data access"""
 
